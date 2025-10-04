@@ -83,7 +83,7 @@ export default function LoginScreen() {
             }}
             keyboardType="email-address"
             autoCapitalize="none"
-            className={`w-full border p-3 rounded mb-1 ${
+            className={`w-full border p-3 rounded mb-1 px-5 ${
               emailError ? "border-red-500" : "border-gray-300"
             }`}
           />
@@ -135,8 +135,9 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => router.push("/registerOptions")}>
-            <Text className="text-blue-500 mt-4">
-              Don't have an account? Register
+            <Text className="text-gray-600 mt-4">
+              Don't have an account?{" "}
+              <Text className="text-blue-500 font-semibold">Log In</Text>
             </Text>
           </TouchableOpacity>
         </View>

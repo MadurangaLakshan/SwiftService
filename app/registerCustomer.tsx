@@ -168,7 +168,7 @@ export default function RegisterCustomer() {
           setFullName(text);
           setErrors({ ...errors, fullName: "" });
         }}
-        className={`w-full border p-3 rounded mb-1 ${
+        className={`w-full border p-3 rounded mb-1 px-4 ${
           errors.fullName ? "border-red-500" : "border-gray-300"
         }`}
       />
@@ -190,7 +190,7 @@ export default function RegisterCustomer() {
         }}
         keyboardType="email-address"
         autoCapitalize="none"
-        className={`w-full border p-3 rounded mb-1 ${
+        className={`w-full border p-3 rounded mb-1 px-4 ${
           errors.email ? "border-red-500" : "border-gray-300"
         }`}
       />
@@ -211,7 +211,7 @@ export default function RegisterCustomer() {
           setErrors({ ...errors, phone: "" });
         }}
         keyboardType="phone-pad"
-        className={`w-full border p-3 rounded mb-1 ${
+        className={`w-full border p-3 rounded mb-1 px-4 ${
           errors.phone ? "border-red-500" : "border-gray-300"
         }`}
       />
@@ -224,7 +224,7 @@ export default function RegisterCustomer() {
       )}
 
       <View
-        className={`w-full flex-row items-center border rounded mb-1 px-2 ${
+        className={`w-full flex-row items-center border rounded mb-1 px-1 ${
           errors.password ? "border-red-500" : "border-gray-300"
         }`}
       >
@@ -256,7 +256,7 @@ export default function RegisterCustomer() {
       )}
 
       <View
-        className={`w-full flex-row items-center border rounded mb-1 px-2 ${
+        className={`w-full flex-row items-center border rounded mb-1 px-1 ${
           errors.confirmPassword ? "border-red-500" : "border-gray-300"
         }`}
       >
@@ -306,7 +306,7 @@ export default function RegisterCustomer() {
           setAddress(text);
           setErrors({ ...errors, address: "" });
         }}
-        className={`w-full border p-3 rounded mb-1 ${
+        className={`w-full border p-3 rounded mb-1 px-4 ${
           errors.address ? "border-red-500" : "border-gray-300"
         }`}
       />
@@ -328,7 +328,7 @@ export default function RegisterCustomer() {
               setCity(text);
               setErrors({ ...errors, city: "" });
             }}
-            className={`w-full border p-3 rounded mb-1 ${
+            className={`w-full border p-3 rounded mb-1 px-4 ${
               errors.city ? "border-red-500" : "border-gray-300"
             }`}
           />
@@ -348,7 +348,7 @@ export default function RegisterCustomer() {
               setPostalCode(text);
               setErrors({ ...errors, postalCode: "" });
             }}
-            className={`w-full border p-3 rounded mb-1 ${
+            className={`w-full border p-3 rounded mb-1 px-4 ${
               errors.postalCode ? "border-red-500" : "border-gray-300"
             }`}
           />
@@ -447,9 +447,9 @@ export default function RegisterCustomer() {
                 {step > 1 && (
                   <TouchableOpacity
                     onPress={() => setStep(step - 1)}
-                    className="flex-1 bg-gray-200 p-3 rounded"
+                    className="flex-1 bg-gray-200 p-3 rounded justify-center"
                   >
-                    <Text className="text-gray-700 text-center font-bold">
+                    <Text className="text-gray-700 text-center font-bold ">
                       Back
                     </Text>
                   </TouchableOpacity>
