@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React from "react";
 import {
   Image,
@@ -160,13 +161,13 @@ const HomeScreen = () => {
   return (
     <View className="flex-1 bg-white">
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View className="flex-1">
             <View className="px-6">
-              {/* <View className="flex-row items-center gap-2  justify-center">
+              <View className="flex-row items-center gap-2 mt-12 mb-6 justify-center">
                 <Image
                   source={require("../../assets/images/SwiftService.png")}
                   className="w-16 h-16"
@@ -175,9 +176,9 @@ const HomeScreen = () => {
                   <Text className="text-blue-700">Swift</Text>
                   <Text className="text-gray-700">Service</Text>
                 </Text>
-              </View> */}
+              </View>
 
-              <View className="flex-row items-center justify-between w-full mt-12 mb-6">
+              <View className="flex-row items-center justify-between w-full mb-4">
                 <View>
                   <Text className="text-2xl font-semibold text-gray-800">
                     <Text>Hey </Text>
@@ -187,11 +188,16 @@ const HomeScreen = () => {
                     How's your day going?
                   </Text>
                 </View>
-                <Ionicons
-                  name="notifications-outline"
-                  size={28}
-                  color="black"
-                />
+
+                <TouchableOpacity
+                  onPress={() => router.push("../customer/NotificationScreen")}
+                >
+                  <Ionicons
+                    name="notifications-outline"
+                    size={28}
+                    color="black"
+                  />
+                </TouchableOpacity>
               </View>
 
               <View className="flex-row items-center bg-gray-100 rounded-2xl px-4 py-3 mb-6">

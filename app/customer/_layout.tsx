@@ -44,7 +44,6 @@ export default function CustomerLayout() {
           ),
         }}
       />
-
       <Tabs.Screen
         name="MessagesScreen"
         options={{
@@ -67,6 +66,12 @@ export default function CustomerLayout() {
           tabBarLabel: ({ color }) => (
             <Text style={{ color, fontSize: 12, marginTop: 4 }}>Profile</Text>
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="NotificationScreen"
+        options={{
+          href: null, // This hides it from the tab bar
         }}
       />
     </Tabs>
