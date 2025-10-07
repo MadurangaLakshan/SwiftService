@@ -13,9 +13,8 @@ import {
   View,
 } from "react-native";
 
-const CustomerHomeScreen = () => {
+const HomeScreen = () => {
   const [selectedCategory, setSelectedCategory] = React.useState("All");
-  const [activeTab, setActiveTab] = React.useState("Home");
 
   const categories = [
     "All",
@@ -161,24 +160,24 @@ const CustomerHomeScreen = () => {
   return (
     <View className="flex-1 bg-white">
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View className="flex-1">
             <View className="px-6">
-              <View className="flex-row items-center gap-2 mt-12 mb-6 justify-center">
+              {/* <View className="flex-row items-center gap-2  justify-center">
                 <Image
-                  source={require("../assets/images/SwiftService.png")}
+                  source={require("../../assets/images/SwiftService.png")}
                   className="w-16 h-16"
                 />
                 <Text className="text-2xl font-bold">
                   <Text className="text-blue-700">Swift</Text>
                   <Text className="text-gray-700">Service</Text>
                 </Text>
-              </View>
+              </View> */}
 
-              <View className="flex-row items-center justify-between w-full mb-4">
+              <View className="flex-row items-center justify-between w-full mt-12 mb-6">
                 <View>
                   <Text className="text-2xl font-semibold text-gray-800">
                     <Text>Hey </Text>
@@ -327,83 +326,8 @@ const CustomerHomeScreen = () => {
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
-
-      {/* Updated Navigation Bar with outline and active states */}
-      <View className="flex-row justify-around items-center bg-white py-3 pb-6 border-t border-gray-200">
-        <TouchableOpacity
-          className="items-center"
-          onPress={() => setActiveTab("Home")}
-        >
-          <Ionicons
-            name="home"
-            size={26}
-            color={activeTab === "Home" ? "#3b82f6" : "#9ca3af"}
-          />
-          <Text
-            className={`text-xs mt-1 ${
-              activeTab === "Home" ? "text-blue-600" : "text-gray-400"
-            }`}
-          >
-            Home
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          className="items-center"
-          onPress={() => setActiveTab("Bookings")}
-        >
-          <Ionicons
-            name="calendar-outline"
-            size={26}
-            color={activeTab === "Bookings" ? "#3b82f6" : "#9ca3af"}
-          />
-          <Text
-            className={`text-xs mt-1 ${
-              activeTab === "Bookings" ? "text-blue-600" : "text-gray-400"
-            }`}
-          >
-            Bookings
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          className="items-center"
-          onPress={() => setActiveTab("Messages")}
-        >
-          <Ionicons
-            name="chatbox-ellipses-outline"
-            size={26}
-            color={activeTab === "Messages" ? "#3b82f6" : "#9ca3af"}
-          />
-          <Text
-            className={`text-xs mt-1 ${
-              activeTab === "Messages" ? "text-blue-600" : "text-gray-400"
-            }`}
-          >
-            Messages
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          className="items-center"
-          onPress={() => setActiveTab("Profile")}
-        >
-          <Ionicons
-            name="person-outline"
-            size={26}
-            color={activeTab === "Profile" ? "#3b82f6" : "#9ca3af"}
-          />
-          <Text
-            className={`text-xs mt-1 ${
-              activeTab === "Profile" ? "text-blue-600" : "text-gray-400"
-            }`}
-          >
-            Profile
-          </Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
 
-export default CustomerHomeScreen;
+export default HomeScreen;
