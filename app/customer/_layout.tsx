@@ -71,7 +71,19 @@ export default function CustomerLayout() {
       <Tabs.Screen
         name="NotificationScreen"
         options={{
-          href: null, // This hides it from the tab bar
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="ChatScreen"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="BookingDetailsScreen"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
