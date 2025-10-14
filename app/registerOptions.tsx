@@ -28,7 +28,7 @@ const RegisterOptions = () => {
       {/* Register as Customer Option */}
       <TouchableOpacity
         className="w-full bg-white border border-gray-200 rounded-lg p-4 mb-4 flex-row items-center"
-        onPress={() => router.push("/registerCustomer")}
+        onPress={() => router.push("/customer/registerCustomer")}
         activeOpacity={0.7}
       >
         <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center mr-4">
@@ -45,10 +45,9 @@ const RegisterOptions = () => {
         <Ionicons name="chevron-forward" size={24} color={colors.gray[400]} />
       </TouchableOpacity>
 
-      {/* Register as Service Provider Option */}
       <TouchableOpacity
         className="w-full bg-white border border-gray-200 rounded-lg p-4 mb-6 flex-row items-center"
-        onPress={() => router.push("/registerProvider")}
+        onPress={() => router.push("/serviceProvider/registerProvider")}
         activeOpacity={0.7}
       >
         <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center mr-4">

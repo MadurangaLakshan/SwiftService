@@ -86,6 +86,7 @@ export default function CustomerLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen name="registerCustomer" options={{ href: null }} />
     </Tabs>
   );
 }
