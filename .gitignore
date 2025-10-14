@@ -41,3 +41,29 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Backend
+server/node_modules/
+server/dist/
+server/.env
+server/serviceAccountKey.json
+
+# Frontend
+node_modules/
+.expo/
+dist/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
