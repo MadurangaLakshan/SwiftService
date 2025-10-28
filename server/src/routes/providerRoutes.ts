@@ -1,4 +1,5 @@
 import express from "express";
+import admin from "firebase-admin";
 import { authenticateUser, AuthRequest } from "../middleware/authMiddleware";
 import Provider from "../models/Provider";
 
@@ -37,7 +38,17 @@ router.get("/:userId", authenticateUser, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: "Provider not found" });
     }
 
-    res.json(provider);
+    const firebaseUser = await admin.auth().getUser(req.params.userId);
+
+    const completeProfile = {
+      ...provider.toObject(),
+      fullName: firebaseUser.displayName || "",
+      email: firebaseUser.email || "",
+      phone: firebaseUser.phoneNumber || "",
+      emailVerified: firebaseUser.emailVerified,
+    };
+
+    res.json(completeProfile);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
