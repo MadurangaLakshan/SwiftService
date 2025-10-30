@@ -1,7 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { signOut } from "firebase/auth";
 import React from "react";
-import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { auth } from "../config/firebase"; // Add this import
 
 interface MenuItem {
   id: number;
@@ -82,6 +91,35 @@ const ProfileScreen: React.FC = () => {
     { label: "Reviews", value: "12", icon: "star" },
     { label: "Favorites", value: "8", icon: "heart" },
   ];
+
+  const handleLogout = async () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await signOut(auth);
+
+              console.log("User logged out successfully");
+              router.replace("/");
+            } catch (error: any) {
+              console.error("Logout error:", error);
+              Alert.alert("Error", "Failed to logout. Please try again.");
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -245,10 +283,7 @@ const ProfileScreen: React.FC = () => {
         {/* Logout Button */}
         <View className="px-6 mt-6 mb-8">
           <TouchableOpacity
-            onPress={() => {
-              // Add logout logic here
-              router.replace("/");
-            }}
+            onPress={handleLogout}
             className="bg-red-50 border border-red-200 rounded-2xl py-4 flex-row items-center justify-center"
           >
             <Ionicons name="log-out-outline" size={24} color="#ef4444" />

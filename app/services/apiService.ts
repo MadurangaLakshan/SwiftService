@@ -1,7 +1,7 @@
 import { auth } from "../config/firebase";
 
 const API_URL = __DEV__
-  ? "http://localhost:3000/api"
+  ? process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.XXX:3000/api"
   : "https://your-production-domain.com/api";
 
 const authenticatedRequest = async (
@@ -34,6 +34,17 @@ const authenticatedRequest = async (
   } catch (error: any) {
     console.error("API Request Error:", error);
     return { success: false, error: error.message };
+  }
+};
+
+export const getUserType = async (userId: string) => {
+  try {
+    const response = await fetch(`${API_URL}/users/type/${userId}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching user type:", error);
+    return { success: false, error: "Failed to fetch user type" };
   }
 };
 

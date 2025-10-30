@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -13,6 +15,8 @@ import {
   View,
 } from "react-native";
 import colors from "tailwindcss/colors";
+import { auth } from "./config/firebase";
+import { getUserType } from "./services/apiService";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -21,13 +25,14 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const validateEmail = (email: string) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!validateEmail(email)) {
       setError("Please enter a valid email");
       return;
@@ -39,8 +44,61 @@ export default function LoginScreen() {
 
     setError("");
     setEmailError("");
-    console.log("Logging in:", email, password);
-    // TODO: connect with Firebase or backend
+    setLoading(true);
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      const userId = userCredential.user.uid;
+      console.log("User logged in:", userId);
+
+      const userTypeResult = await getUserType(userId);
+
+      if (!userTypeResult.success) {
+        setError("Failed to fetch user information");
+        return;
+      }
+
+      if (userTypeResult.userType === "provider") {
+        router.replace("/serviceProvider/HomeScreen");
+      } else if (userTypeResult.userType === "customer") {
+        router.replace("/customer/HomeScreen");
+      } else {
+        setError("Unknown user type");
+      }
+    } catch (error: any) {
+      console.error("Login error:", error.code, error.message);
+
+      // Handle specific Firebase errors
+      switch (error.code) {
+        case "auth/invalid-email":
+          setError("Invalid email address");
+          break;
+        case "auth/user-disabled":
+          setError("This account has been disabled");
+          break;
+        case "auth/user-not-found":
+          setError("No account found with this email");
+          break;
+        case "auth/wrong-password":
+          setError("Incorrect password");
+          break;
+        case "auth/invalid-credential":
+          setError("Invalid email or password");
+          break;
+        case "auth/too-many-requests":
+          setError("Too many failed attempts. Please try again later");
+          break;
+        default:
+          setError("Login failed. Please try again");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -129,15 +187,20 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             onPress={handleLogin}
+            disabled={loading}
             className="bg-blue-500 w-full p-3 rounded"
           >
-            <Text className="text-white text-center font-bold">Login</Text>
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className="text-white text-center font-bold">Login</Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => router.push("/registerOptions")}>
             <Text className="text-gray-600 mt-4">
               Don't have an account?{" "}
-              <Text className="text-blue-500 font-semibold">Log In</Text>
+              <Text className="text-blue-500 font-semibold">Sign Up</Text>
             </Text>
           </TouchableOpacity>
         </View>

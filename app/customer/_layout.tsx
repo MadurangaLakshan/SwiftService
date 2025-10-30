@@ -86,7 +86,10 @@ export default function CustomerLayout() {
           href: null,
         }}
       />
-      <Tabs.Screen name="registerCustomer" options={{ href: null }} />
+      <Tabs.Screen
+        name="registerCustomer"
+        options={{ href: null, tabBarStyle: { display: "none" } }}
+      />
     </Tabs>
   );
 }

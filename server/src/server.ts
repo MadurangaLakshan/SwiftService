@@ -2,7 +2,9 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import { connectDatabase } from "./config/database";
+import customerRoutes from "./routes/customerRoutes";
 import providerRoutes from "./routes/providerRoutes";
+import userRoutes from "./routes/userRoutes";
 
 dotenv.config();
 
@@ -16,6 +18,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/providers", providerRoutes);
+app.use("/api/customers", customerRoutes);
+app.use("/api/users", userRoutes);
 
 // Health check
 app.get("/health", (req, res) => {

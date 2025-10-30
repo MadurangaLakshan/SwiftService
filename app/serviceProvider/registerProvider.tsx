@@ -156,6 +156,7 @@ export default function RegisterProvider() {
     switch (step) {
       case 1:
         isValid = validateStep1();
+        console.log("validating step 1 ");
         break;
       case 2:
         isValid = validateStep2();
@@ -166,12 +167,16 @@ export default function RegisterProvider() {
       case 4:
         isValid = validateStep4();
         break;
+      case 5:
+        isValid = validateStep5();
+        break;
     }
 
-    if (isValid && step < 4) {
+    if (isValid && step < 5) {
       setStep(step + 1);
-    } else if (isValid && step === 4) {
+    } else if (isValid && step === 5) {
       handleSubmit();
+      console.log("submitting");
     }
   };
 
@@ -180,6 +185,7 @@ export default function RegisterProvider() {
 
     try {
       const authResult = await registerWithFirebase(email, password);
+
       if (!authResult.success) {
         Alert.alert("Registration Failed", authResult.error);
         return;
@@ -193,7 +199,6 @@ export default function RegisterProvider() {
         });
       }
 
-      // Step 3: Save to MongoDB with profile picture URL
       const providerData = {
         userId: authResult.userId,
         services: selectedServices,
@@ -203,19 +208,23 @@ export default function RegisterProvider() {
         licenseNumber,
         hourlyRate: parseFloat(hourlyRate),
         bio,
-        address,
-        city,
-        postalCode,
+        location: {
+          address,
+          city,
+          postalCode,
+          serviceRadius: parseInt(serviceRadius),
+        },
         serviceRadius: parseInt(serviceRadius),
-        profilePhoto: profilePictureUrl, // Include profile picture URL
+        profilePhoto: profilePictureUrl,
       };
 
       const result = await registerProviderProfile(providerData);
 
       if (result.success) {
         Alert.alert("Success!", "Your provider account has been created!", [
-          { text: "OK", onPress: () => router.replace("/") },
+          { text: "OK", onPress: () => router.replace("/customer/HomeScreen") },
         ]);
+        console.log("provider registered");
       } else {
         Alert.alert("Error", result.error);
       }
@@ -739,7 +748,7 @@ export default function RegisterProvider() {
                   className="flex-1 bg-blue-500 p-3 rounded"
                 >
                   <Text className="text-white text-center font-bold">
-                    {step === 4 ? "Complete Registration" : "Next"}
+                    {step === 5 ? "Complete Registration" : "Next"}
                   </Text>
                 </TouchableOpacity>
               </View>
