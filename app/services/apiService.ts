@@ -2,7 +2,7 @@ import { auth } from "../config/firebase";
 
 const API_URL = __DEV__
   ? process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.XXX:3000/api"
-  : "https://your-production-domain.com/api";
+  : "https://production-domain.com/api";
 
 const authenticatedRequest = async (
   endpoint: string,
@@ -127,9 +127,16 @@ export const registerCustomerProfile = async (customerData: any) => {
 };
 
 export const getCustomerProfile = async (userId: string) => {
-  return authenticatedRequest(`/customers/${userId}`, {
-    method: "GET",
-  });
+  try {
+    const result = await authenticatedRequest(`/customers/${userId}`, {
+      method: "GET",
+    });
+
+    return result;
+  } catch (error: any) {
+    console.error("Error fetching customer profile:", error);
+    return { success: false, error: error.message };
+  }
 };
 
 export const updateCustomerProfile = async (userId: string, updates: any) => {

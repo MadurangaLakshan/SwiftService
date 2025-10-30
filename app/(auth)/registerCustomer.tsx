@@ -15,11 +15,13 @@ import {
   View,
 } from "react-native";
 import colors from "tailwindcss/colors";
+import { useCustomer } from "../context/CustomerContext";
 import { registerCustomerProfile } from "../services/apiService";
 import { registerWithFirebase } from "../services/authService";
 
 export default function RegisterCustomer() {
   const router = useRouter();
+  const { setCustomerData } = useCustomer();
   const [step, setStep] = useState(1);
 
   const [fullName, setFullName] = useState("");
@@ -117,19 +119,18 @@ export default function RegisterCustomer() {
     setLoading(true);
 
     try {
-      // Step 1: Firebase Auth
       const authResult = await registerWithFirebase(email, password);
       if (!authResult.success) {
         Alert.alert("Registration Failed", authResult.error);
+        setLoading(false);
         return;
       }
 
-      // Step 2: Save to MongoDB
       const customerData = {
         userId: authResult.userId,
-        email: authResult.email,
-        fullName,
-        phone,
+        name: fullName,
+        email: email,
+        phone: phone,
         location: {
           address,
           city,
@@ -138,21 +139,35 @@ export default function RegisterCustomer() {
         propertyType,
       };
 
+      console.log("Sending customer data:", customerData);
+
       const result = await registerCustomerProfile(customerData);
 
       if (result.success) {
-        Alert.alert("Success!", "Your account has been created!", [
-          { text: "OK", onPress: () => router.replace("/") },
+        console.log("Customer registered successfully:", result.data);
+
+        // Directly set the customer data in context
+        setCustomerData(result.data);
+
+        Alert.alert("Success!", "Your account has been created successfully!", [
+          {
+            text: "OK",
+            onPress: () => {
+              router.replace("/customer/HomeScreen");
+            },
+          },
         ]);
       } else {
         Alert.alert("Error", result.error);
       }
     } catch (error: any) {
+      console.error("Registration error:", error);
       Alert.alert("Error", error.message);
     } finally {
       setLoading(false);
     }
   };
+
   const renderProgressBar = () => (
     <View className="flex-row items-center mb-6 px-4">
       {[1, 2].map((num) => (
@@ -485,10 +500,17 @@ export default function RegisterCustomer() {
                 )}
                 <TouchableOpacity
                   onPress={handleNext}
-                  className="flex-1 bg-blue-500 p-3 rounded"
+                  disabled={loading}
+                  className={`flex-1 p-3 rounded ${
+                    loading ? "bg-blue-300" : "bg-blue-500"
+                  }`}
                 >
                   <Text className="text-white text-center font-bold">
-                    {step === 2 ? "Complete Registration" : "Next"}
+                    {loading
+                      ? "Processing..."
+                      : step === 2
+                      ? "Complete Registration"
+                      : "Next"}
                   </Text>
                 </TouchableOpacity>
               </View>

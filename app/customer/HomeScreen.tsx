@@ -13,9 +13,11 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { useCustomer } from "../context/CustomerContext";
 
 const HomeScreen = () => {
   const [selectedCategory, setSelectedCategory] = React.useState("All");
+  const { customerData, loading } = useCustomer();
 
   const categories = [
     "All",
@@ -182,7 +184,10 @@ const HomeScreen = () => {
                 <View>
                   <Text className="text-2xl font-semibold text-gray-800">
                     <Text>Hey </Text>
-                    <Text className="text-blue-700">Maduranga!</Text>
+
+                    <Text className="text-blue-700">
+                      {customerData?.name ?? "Guest"}
+                    </Text>
                   </Text>
                   <Text className="text-lg text-gray-500">
                     How's your day going?

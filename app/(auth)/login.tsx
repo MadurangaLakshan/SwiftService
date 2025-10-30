@@ -15,8 +15,8 @@ import {
   View,
 } from "react-native";
 import colors from "tailwindcss/colors";
-import { auth } from "./config/firebase";
-import { getUserType } from "./services/apiService";
+import { auth } from "../config/firebase";
+import { getUserType } from "../services/apiService";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -110,7 +110,7 @@ export default function LoginScreen() {
         <View className="flex-1 justify-center items-center bg-white p-6">
           <View className="flex-row items-center gap-2">
             <Image
-              source={require("../assets/images/SwiftService.png")}
+              source={require("../../assets/images/SwiftService.png")}
               className="w-32 h-32 mb-6"
             />
             <Text className="text-4xl font-bold pb-4">
@@ -122,7 +122,7 @@ export default function LoginScreen() {
           <Text className="text-3xl font-bold mb-6">Login</Text>
 
           <Image
-            source={require("../assets/images/Login.png")}
+            source={require("../../assets/images/Login.png")}
             className="w-64 h-64 mb-12"
           />
 

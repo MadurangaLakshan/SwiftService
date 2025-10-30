@@ -28,7 +28,7 @@ const RegisterOptions = () => {
       {/* Register as Customer Option */}
       <TouchableOpacity
         className="w-full bg-white border border-gray-200 rounded-lg p-4 mb-4 flex-row items-center"
-        onPress={() => router.push("/customer/registerCustomer")}
+        onPress={() => router.push("/(auth)/registerCustomer")}
         activeOpacity={0.7}
       >
         <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center mr-4">

@@ -2,6 +2,9 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export interface IProvider extends Document {
   userId: string;
+  name: string;
+  email: string;
+  phone: string;
   services: string[];
   customServices: string[];
   yearsExperience: number;
@@ -32,6 +35,22 @@ const ProviderSchema: Schema = new Schema(
       required: true,
       unique: true,
       index: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      lowercase: true,
+      trim: true,
+    },
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
     },
     services: [{ type: String, required: true }],
     customServices: [{ type: String }],
@@ -90,5 +109,6 @@ const ProviderSchema: Schema = new Schema(
 ProviderSchema.index({ services: 1, "location.city": 1 });
 ProviderSchema.index({ rating: -1, totalJobs: -1 });
 ProviderSchema.index({ customServices: 1 });
+ProviderSchema.index({ email: 1 });
 
 export default mongoose.model<IProvider>("Provider", ProviderSchema);

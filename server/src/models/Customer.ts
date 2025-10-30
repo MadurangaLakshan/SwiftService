@@ -2,6 +2,9 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export interface ICustomer extends Document {
   userId: string;
+  name: string;
+  email: string;
+  phone: string;
   location: {
     address: string;
     city: string;
@@ -21,6 +24,22 @@ const CustomerSchema: Schema = new Schema(
       required: true,
       unique: true,
       index: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      lowercase: true,
+      trim: true,
+    },
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
     },
     location: {
       address: { type: String, required: true },
@@ -43,5 +62,6 @@ const CustomerSchema: Schema = new Schema(
 );
 
 CustomerSchema.index({ "location.city": 1 });
+CustomerSchema.index({ email: 1 });
 
 export default mongoose.model<ICustomer>("Customer", CustomerSchema);

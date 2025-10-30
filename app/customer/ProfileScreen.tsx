@@ -10,7 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { auth } from "../config/firebase"; // Add this import
+import { auth } from "../config/firebase";
+import { useCustomer } from "../context/CustomerContext";
 
 interface MenuItem {
   id: number;
@@ -27,6 +28,7 @@ interface Stat {
 }
 
 const ProfileScreen: React.FC = () => {
+  const { customerData, loading } = useCustomer();
   const menuItems: MenuItem[] = [
     {
       id: 1,
@@ -137,12 +139,14 @@ const ProfileScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
             <Text className="text-white text-2xl font-bold mt-4">
-              Maduranga Silva
+              {customerData?.name}
             </Text>
             <Text className="text-blue-100 text-base mt-1">
-              maduranga@email.com
+              {customerData?.email}
             </Text>
-            <Text className="text-blue-100 text-sm mt-1">+94 77 123 4567</Text>
+            <Text className="text-blue-100 text-sm mt-1">
+              {customerData?.phone}
+            </Text>
           </View>
         </View>
 
