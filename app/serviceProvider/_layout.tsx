@@ -34,6 +34,83 @@ export default function ProviderLayout() {
             ),
           }}
         />
+
+        <Tabs.Screen
+          name="BookingsScreen"
+          options={{
+            title: "Bookings",
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name="calendar-outline" size={26} color={color} />
+            ),
+            tabBarLabel: ({ color }) => (
+              <Text style={{ color, fontSize: 12, marginTop: 4 }}>
+                Bookings
+              </Text>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="Dashboard"
+          options={{
+            title: "Dashboard",
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name="bar-chart-outline" size={26} color={color} />
+            ),
+            tabBarLabel: ({ color }) => (
+              <Text style={{ color, fontSize: 12, marginTop: 4 }}>
+                Dashboard
+              </Text>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="MessagesScreen"
+          options={{
+            title: "Messages",
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name="chatbox-ellipses-outline"
+                size={26}
+                color={color}
+              />
+            ),
+            tabBarLabel: ({ color }) => (
+              <Text style={{ color, fontSize: 12, marginTop: 4 }}>
+                Messages
+              </Text>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="ProfileScreen"
+          options={{
+            title: "Profile",
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name="person-outline" size={26} color={color} />
+            ),
+            tabBarLabel: ({ color }) => (
+              <Text style={{ color, fontSize: 12, marginTop: 4 }}>Profile</Text>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="NotificationScreen"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="ChatScreen"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="BookingDetailsScreen"
+          options={{
+            href: null,
+          }}
+        />
       </Tabs>
     </ProviderProvider>
   );
