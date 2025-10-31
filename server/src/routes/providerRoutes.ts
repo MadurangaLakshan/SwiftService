@@ -1,32 +1,97 @@
 import express from "express";
-import admin from "firebase-admin";
 import { authenticateUser, AuthRequest } from "../middleware/authMiddleware";
 import Provider from "../models/Provider";
+import User from "../models/User";
 
 const router = express.Router();
 
 router.post("/register", authenticateUser, async (req: AuthRequest, res) => {
   try {
-    const { userId } = req.body;
+    const {
+      userId,
+      name,
+      email,
+      phone,
+      services,
+      customServices,
+      yearsExperience,
+      businessName,
+      licenseNumber,
+      hourlyRate,
+      bio,
+      location,
+      profilePhoto,
+    } = req.body;
 
     if (req.user?.uid !== userId) {
-      return res.status(403).json({ error: "Unauthorized" });
+      return res.status(403).json({
+        success: false,
+        error: "Unauthorized",
+      });
     }
 
     const existingProvider = await Provider.findOne({ userId });
     if (existingProvider) {
-      return res.status(400).json({ error: "Provider already exists" });
+      return res.status(400).json({
+        success: false,
+        error: "Provider profile already exists",
+      });
     }
 
-    const provider = new Provider(req.body);
+    // Validate required fields
+    if (
+      !name ||
+      !email ||
+      !phone ||
+      !services ||
+      !location ||
+      !hourlyRate ||
+      yearsExperience === undefined
+    ) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "Missing required fields: name, email, phone, services, location, hourlyRate, yearsExperience",
+      });
+    }
+
+    // Update or create User document
+    await User.findOneAndUpdate(
+      { userId },
+      { userId, email, userType: "provider" },
+      { upsert: true, new: true }
+    );
+
+    // Create provider with all data from request
+    const provider = new Provider({
+      userId,
+      name,
+      email,
+      phone,
+      services,
+      customServices: customServices || [],
+      yearsExperience,
+      businessName,
+      licenseNumber,
+      hourlyRate,
+      bio,
+      location,
+      profilePhoto: profilePhoto || "",
+    });
+
     await provider.save();
 
     res.status(201).json({
+      success: true,
       message: "Provider registered successfully",
-      provider,
+      data: provider,
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Provider registration error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
   }
 });
 
@@ -35,29 +100,33 @@ router.get("/:userId", authenticateUser, async (req: AuthRequest, res) => {
     const provider = await Provider.findOne({ userId: req.params.userId });
 
     if (!provider) {
-      return res.status(404).json({ error: "Provider not found" });
+      console.log("Provider not found for userId:", req.params.userId);
+      return res.status(404).json({
+        success: false,
+        error: "Provider not found",
+        code: "PROVIDER_NOT_FOUND",
+      });
     }
 
-    const firebaseUser = await admin.auth().getUser(req.params.userId);
-
-    const completeProfile = {
-      ...provider.toObject(),
-      fullName: firebaseUser.displayName || "",
-      email: firebaseUser.email || "",
-      phone: firebaseUser.phoneNumber || "",
-      emailVerified: firebaseUser.emailVerified,
-    };
-
-    res.json(completeProfile);
+    console.log("Provider found:", provider.userId);
+    res.json(provider);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Error fetching provider:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      code: "SERVER_ERROR",
+    });
   }
 });
 
 router.put("/:userId", authenticateUser, async (req: AuthRequest, res) => {
   try {
     if (req.user?.uid !== req.params.userId) {
-      return res.status(403).json({ error: "Unauthorized" });
+      return res.status(403).json({
+        success: false,
+        error: "Unauthorized",
+      });
     }
 
     const provider = await Provider.findOneAndUpdate(
@@ -67,12 +136,56 @@ router.put("/:userId", authenticateUser, async (req: AuthRequest, res) => {
     );
 
     if (!provider) {
-      return res.status(404).json({ error: "Provider not found" });
+      return res.status(404).json({
+        success: false,
+        error: "Provider not found",
+      });
     }
 
-    res.json({ message: "Provider updated", provider });
+    res.json({
+      success: true,
+      message: "Provider updated successfully",
+      data: provider,
+    });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+router.delete("/:userId", authenticateUser, async (req: AuthRequest, res) => {
+  try {
+    if (req.user?.uid !== req.params.userId) {
+      return res.status(403).json({
+        success: false,
+        error: "Unauthorized",
+      });
+    }
+
+    const provider = await Provider.findOneAndUpdate(
+      { userId: req.params.userId },
+      { isActive: false },
+      { new: true }
+    );
+
+    if (!provider) {
+      return res.status(404).json({
+        success: false,
+        error: "Provider not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Provider account deactivated",
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
   }
 });
 
@@ -93,7 +206,10 @@ router.get("/", authenticateUser, async (req: AuthRequest, res) => {
     const providers = await Provider.find(query).sort({ rating: -1 });
     res.json(providers);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
   }
 });
 

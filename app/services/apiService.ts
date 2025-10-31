@@ -56,9 +56,16 @@ export const registerProviderProfile = async (providerData: any) => {
 };
 
 export const getProviderProfile = async (userId: string) => {
-  return authenticatedRequest(`/providers/${userId}`, {
-    method: "GET",
-  });
+  try {
+    const result = authenticatedRequest(`/providers/${userId}`, {
+      method: "GET",
+    });
+
+    return result;
+  } catch (error: any) {
+    console.error("Error fetching customer profile:", error);
+    return { success: false, error: error.message };
+  }
 };
 
 export const updateProviderProfile = async (userId: string, updates: any) => {

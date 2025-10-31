@@ -201,6 +201,9 @@ export default function RegisterProvider() {
 
       const providerData = {
         userId: authResult.userId,
+        name: fullName,
+        email: email,
+        phone: phone,
         services: selectedServices,
         customServices,
         yearsExperience: parseInt(yearsExperience) || 0,
@@ -222,7 +225,10 @@ export default function RegisterProvider() {
 
       if (result.success) {
         Alert.alert("Success!", "Your provider account has been created!", [
-          { text: "OK", onPress: () => router.replace("/customer/HomeScreen") },
+          {
+            text: "OK",
+            onPress: () => router.replace("/serviceProvider/HomeScreen"),
+          },
         ]);
         console.log("provider registered");
       } else {
