@@ -263,6 +263,23 @@ const HomeScreen = () => {
                 filteredProviders.map((provider) => (
                   <TouchableOpacity
                     key={provider.id}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/customer/ProviderDetailsScreen",
+                        params: {
+                          id: provider.id,
+                          name: provider.name,
+                          service: provider.service,
+                          category: provider.category,
+                          rating: provider.rating,
+                          reviews: provider.reviews,
+                          price: provider.price,
+                          image: provider.image,
+                          verified: provider.verified,
+                          specialties: JSON.stringify(provider.specialties),
+                        },
+                      } as any)
+                    }
                     className="bg-white rounded-2xl p-4 mb-4 border border-gray-200 shadow-sm"
                   >
                     <View className="flex-row">
