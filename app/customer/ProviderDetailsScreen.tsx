@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
 import {
   Image,
+  Linking,
   Modal,
   ScrollView,
   Text,
@@ -10,11 +11,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { createBooking } from "../services/apiService";
 
 const ProviderDetailsScreen = () => {
   const params = useLocalSearchParams();
   const {
     id,
+    userId,
     name,
     service,
     category,
@@ -24,9 +27,17 @@ const ProviderDetailsScreen = () => {
     image,
     verified,
     specialties,
+    bio,
+    phone,
+    email,
+    location,
+    yearsExperience,
+    businessName,
+    totalJobs,
   } = params;
 
   const specialtiesArray = specialties ? JSON.parse(specialties as string) : [];
+  const locationData = location ? JSON.parse(location as string) : null;
 
   // Normalize service to a string for safe usage (params may provide string or string[])
   const serviceText =
@@ -57,29 +68,57 @@ const ProviderDetailsScreen = () => {
     "4:00 PM - 6:00 PM",
   ];
 
-  const handleBookNow = () => {
+  const handleBookNow = async () => {
     if (!selectedDate || !selectedTime || !address) {
       alert("Please fill in all required fields");
       return;
     }
 
-    // Navigate to booking confirmation or create booking
-    router.push({
-      pathname: "/customer/BookingDetailsScreen",
-      params: {
-        id: Math.floor(Math.random() * 1000),
-        provider: name,
-        service: service,
-        category: category,
-        date: selectedDate,
-        time: selectedTime,
-        price: price,
-        status: "pending",
-        image: image,
-        address: address,
-      },
-    });
-    setShowBookingModal(false);
+    try {
+      const priceStr = typeof price === "string" ? price : String(price);
+      const hourlyRate = parseFloat(priceStr.split("/")[0]) || 0;
+
+      const bookingPayload = {
+        providerId: userId as string,
+        serviceType: serviceText,
+        category: category as string,
+        scheduledDate: selectedDate,
+        timeSlot: selectedTime,
+        serviceAddress: address,
+        additionalNotes: notes,
+        hourlyRate: hourlyRate,
+        estimatedHours: 1,
+      };
+
+      const bookingResult = await createBooking(bookingPayload);
+
+      if (!bookingResult.success) {
+        alert(`Booking failed: ${bookingResult.error}`);
+        return;
+      }
+
+      const bookingData = bookingResult.data.data;
+
+      router.push({
+        pathname: "/customer/BookingDetailsScreen",
+        params: {
+          bookingId: bookingData._id,
+        },
+      });
+
+      setShowBookingModal(false);
+    } catch (error: any) {
+      console.error("Booking error:", error);
+      alert("An unexpected error occurred while creating your booking.");
+    }
+  };
+
+  const handleCall = () => {
+    if (phone) {
+      Linking.openURL(`tel:${phone}`);
+    } else {
+      alert("Phone number not available");
+    }
   };
 
   return (
@@ -118,6 +157,9 @@ const ProviderDetailsScreen = () => {
                 />
               )}
             </View>
+            {businessName && (
+              <Text className="text-sm text-gray-500 mb-1">{businessName}</Text>
+            )}
             <Text className="text-base text-gray-600 mb-2">{service}</Text>
             <View className="flex-row items-center">
               <Ionicons name="star" size={18} color="#fbbf24" />
@@ -126,6 +168,12 @@ const ProviderDetailsScreen = () => {
               </Text>
               <Text className="text-sm text-gray-500 ml-1">
                 ({reviews} reviews)
+              </Text>
+            </View>
+            <View className="flex-row items-center mt-2">
+              <Ionicons name="briefcase-outline" size={16} color="#6b7280" />
+              <Text className="text-sm text-gray-600 ml-1">
+                {yearsExperience || 0} years experience
               </Text>
             </View>
           </View>
@@ -159,14 +207,17 @@ const ProviderDetailsScreen = () => {
               <Ionicons name="chatbox-outline" size={20} color="#3b82f6" />
               <Text className="text-blue-600 font-semibold ml-2">Message</Text>
             </TouchableOpacity>
-            <TouchableOpacity className="flex-1 bg-gray-100 py-3 rounded-xl flex-row items-center justify-center">
+            <TouchableOpacity
+              onPress={handleCall}
+              className="flex-1 bg-gray-100 py-3 rounded-xl flex-row items-center justify-center"
+            >
               <Ionicons name="call-outline" size={20} color="#3b82f6" />
               <Text className="text-blue-600 font-semibold ml-2">Call</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Pricing */}
+        {/* Pricing & Stats */}
         <View className="mx-6 mt-4 bg-white rounded-2xl p-4 border border-gray-200">
           <Text className="text-sm font-semibold text-gray-500 mb-3">
             PRICING
@@ -176,15 +227,39 @@ const ProviderDetailsScreen = () => {
             <Text className="text-2xl font-bold text-blue-600">{price}</Text>
           </View>
 
+          {totalJobs !== undefined && (
+            <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-gray-100">
+              <Text className="text-gray-600">Jobs Completed</Text>
+              <Text className="text-lg font-bold text-gray-800">
+                {totalJobs || 0}
+              </Text>
+            </View>
+          )}
+
+          {locationData && (
+            <View className="mt-3 pt-3 border-t border-gray-100">
+              <View className="flex-row items-center">
+                <Ionicons name="location-outline" size={16} color="#6b7280" />
+                <Text className="text-gray-600 ml-1">
+                  {locationData.city}, {locationData.postalCode}
+                </Text>
+              </View>
+              <Text className="text-xs text-gray-500 mt-1">
+                Service radius: {locationData.serviceRadius || 10} km
+              </Text>
+            </View>
+          )}
+
           <Text className="text-sm font-semibold text-gray-500 mt-4 mb-2">
             ABOUT
           </Text>
           <Text className="text-gray-700 leading-6">
-            Professional {serviceText.toLowerCase()} with over 10 years of
-            experience. Specializing in{" "}
-            {specialtiesArray.join(", ").toLowerCase()}. Committed to delivering
-            high-quality service with attention to detail and customer
-            satisfaction.
+            {bio ||
+              `Professional ${serviceText.toLowerCase()} with over ${
+                yearsExperience || 10
+              } years of experience. Specializing in ${specialtiesArray
+                .join(", ")
+                .toLowerCase()}. Committed to delivering high-quality service with attention to detail and customer satisfaction.`}
           </Text>
         </View>
 

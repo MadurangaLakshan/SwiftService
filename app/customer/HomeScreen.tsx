@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -14,9 +15,40 @@ import {
   View,
 } from "react-native";
 import { useCustomer } from "../context/CustomerContext";
+import { getAllProviders } from "../services/apiService";
+
+interface Provider {
+  _id: string;
+  userId: string;
+  name: string;
+  email: string;
+  phone: string;
+  services: string[];
+  customServices: string[];
+  yearsExperience: number;
+  businessName?: string;
+  licenseNumber?: string;
+  hourlyRate: number;
+  bio?: string;
+  location: {
+    address: string;
+    city: string;
+    postalCode: string;
+    serviceRadius: number;
+  };
+  rating: number;
+  totalJobs: number;
+  totalReviews: number;
+  verified: boolean;
+  isActive: boolean;
+  profilePhoto?: string;
+}
 
 const HomeScreen = () => {
-  const [selectedCategory, setSelectedCategory] = React.useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [loadingProviders, setLoadingProviders] = useState(true);
   const { customerData, loading } = useCustomer();
 
   const categories = [
@@ -30,135 +62,67 @@ const HomeScreen = () => {
     "Landscaping",
   ];
 
-  const serviceProviders = [
-    {
-      id: 1,
-      name: "John Silva",
-      service: "Electrical",
-      category: "Electrical",
-      rating: 4.8,
-      reviews: 124,
-      price: "$50/hr",
-      image: "https://i.pravatar.cc/150?img=12",
-      verified: true,
-      specialties: ["Wiring", "Installation"],
-    },
-    {
-      id: 2,
-      name: "Sarah Perera",
-      service: "Plumbing Services",
-      category: "Plumbing",
-      rating: 4.9,
-      reviews: 98,
-      price: "$45/hr",
-      image: "https://i.pravatar.cc/150?img=45",
-      verified: true,
-      specialties: ["Repairs", "Maintenance"],
-    },
-    {
-      id: 3,
-      name: "Mike Fernando",
-      service: "Construction Work",
-      category: "Construction",
-      rating: 4.7,
-      reviews: 156,
-      price: "$60/hr",
-      image: "https://i.pravatar.cc/150?img=33",
-      verified: true,
-      specialties: ["Renovation", "Building"],
-    },
-    {
-      id: 4,
-      name: "David Kumar",
-      service: "Carpentry Services",
-      category: "Carpentry",
-      rating: 4.6,
-      reviews: 87,
-      price: "$40/hr",
-      image: "https://i.pravatar.cc/150?img=51",
-      verified: true,
-      specialties: ["Furniture", "Custom Work"],
-    },
-    {
-      id: 5,
-      name: "Lisa Jayawardena",
-      service: "Painting Services",
-      category: "Painting",
-      rating: 4.8,
-      reviews: 112,
-      price: "$35/hr",
-      image: "https://i.pravatar.cc/150?img=47",
-      verified: true,
-      specialties: ["Interior", "Exterior"],
-    },
-    {
-      id: 6,
-      name: "Robert Dias",
-      service: "Electrical Services",
-      category: "Electrical",
-      rating: 4.7,
-      reviews: 89,
-      price: "$55/hr",
-      image: "https://i.pravatar.cc/150?img=13",
-      verified: true,
-      specialties: ["Solar", "Smart Home"],
-    },
-    {
-      id: 7,
-      name: "Ahmed Hassan",
-      service: "HVAC Services",
-      category: "HVAC",
-      rating: 4.9,
-      reviews: 143,
-      price: "$65/hr",
-      image: "https://i.pravatar.cc/150?img=52",
-      verified: true,
-      specialties: ["AC Repair", "Installation"],
-    },
-    {
-      id: 8,
-      name: "Priya Wickramasinghe",
-      service: "Landscaping Services",
-      category: "Landscaping",
-      rating: 4.6,
-      reviews: 76,
-      price: "$30/hr",
-      image: "https://i.pravatar.cc/150?img=48",
-      verified: true,
-      specialties: ["Garden Design", "Maintenance"],
-    },
-    {
-      id: 9,
-      name: "Carlos Rodrigo",
-      service: "Plumbing Services",
-      category: "Plumbing",
-      rating: 4.8,
-      reviews: 134,
-      price: "$48/hr",
-      image: "https://i.pravatar.cc/150?img=14",
-      verified: true,
-      specialties: ["Emergency", "Installation"],
-    },
-    {
-      id: 10,
-      name: "Nina Fernando",
-      service: "Painting Services",
-      category: "Painting",
-      rating: 4.7,
-      reviews: 92,
-      price: "$38/hr",
-      image: "https://i.pravatar.cc/150?img=44",
-      verified: true,
-      specialties: ["Commercial", "Residential"],
-    },
-  ];
+  // Fetch providers from database
+  useEffect(() => {
+    fetchProviders();
+  }, []);
 
-  const filteredProviders =
-    selectedCategory === "All"
-      ? serviceProviders
-      : serviceProviders.filter(
-          (provider) => provider.category === selectedCategory
-        );
+  const fetchProviders = async () => {
+    try {
+      setLoadingProviders(true);
+      const response = await getAllProviders();
+
+      if (response.success && response.data) {
+        const providersData = Array.isArray(response.data) ? response.data : [];
+        setProviders(providersData);
+      } else {
+        console.error("Failed to fetch providers:", response.error);
+        setProviders([]);
+      }
+    } catch (error) {
+      console.error("Error fetching providers:", error);
+      setProviders([]);
+    } finally {
+      setLoadingProviders(false);
+    }
+  };
+
+  // Filter providers based on selected category and search query
+  const filteredProviders = providers.filter((provider) => {
+    const matchesCategory =
+      selectedCategory === "All" ||
+      provider.services.includes(selectedCategory) ||
+      provider.customServices.includes(selectedCategory);
+
+    const matchesSearch =
+      searchQuery === "" ||
+      provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      provider.services.some((service) =>
+        service.toLowerCase().includes(searchQuery.toLowerCase())
+      ) ||
+      provider.customServices.some((service) =>
+        service.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+    return matchesCategory && matchesSearch;
+  });
+
+  // Get primary service for display
+  const getPrimaryService = (provider: Provider) => {
+    if (provider.services.length > 0) {
+      return `${provider.services[0]} Services`;
+    }
+    if (provider.customServices.length > 0) {
+      return provider.customServices[0];
+    }
+    return "General Services";
+  };
+
+  // Get specialties for display (max 2)
+  const getSpecialties = (provider: Provider) => {
+    const allServices = [...provider.services, ...provider.customServices];
+    return allServices.slice(0, 2);
+  };
 
   return (
     <View className="flex-1 bg-white">
@@ -184,7 +148,6 @@ const HomeScreen = () => {
                 <View>
                   <Text className="text-2xl font-semibold text-gray-800">
                     <Text>Hey </Text>
-
                     <Text className="text-blue-700">
                       {customerData?.name ?? "Guest"}
                     </Text>
@@ -212,6 +175,8 @@ const HomeScreen = () => {
                   placeholderTextColor="#9ca3af"
                   className="ml-3 flex-1 text-gray-700 text-base"
                   returnKeyType="search"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
                 />
               </View>
 
@@ -259,24 +224,41 @@ const HomeScreen = () => {
                   : `${selectedCategory} Providers`}
               </Text>
 
-              {filteredProviders.length > 0 ? (
+              {loadingProviders ? (
+                <View className="items-center justify-center py-12">
+                  <ActivityIndicator size="large" color="#3b82f6" />
+                  <Text className="text-gray-500 text-base mt-4">
+                    Loading providers...
+                  </Text>
+                </View>
+              ) : filteredProviders.length > 0 ? (
                 filteredProviders.map((provider) => (
                   <TouchableOpacity
-                    key={provider.id}
+                    key={provider._id}
                     onPress={() =>
                       router.push({
                         pathname: "/customer/ProviderDetailsScreen",
                         params: {
-                          id: provider.id,
+                          id: provider._id,
+                          userId: provider.userId,
                           name: provider.name,
-                          service: provider.service,
-                          category: provider.category,
+                          service: getPrimaryService(provider),
+                          category: provider.services[0] || "General",
                           rating: provider.rating,
-                          reviews: provider.reviews,
-                          price: provider.price,
-                          image: provider.image,
+                          reviews: provider.totalReviews,
+                          price: `${provider.hourlyRate}/hr`,
+                          image:
+                            provider.profilePhoto ||
+                            `https://i.pravatar.cc/150?u=${provider.userId}`,
                           verified: provider.verified,
-                          specialties: JSON.stringify(provider.specialties),
+                          specialties: JSON.stringify(getSpecialties(provider)),
+                          bio: provider.bio || "",
+                          phone: provider.phone,
+                          email: provider.email,
+                          location: JSON.stringify(provider.location),
+                          yearsExperience: provider.yearsExperience,
+                          businessName: provider.businessName || "",
+                          totalJobs: provider.totalJobs,
                         },
                       } as any)
                     }
@@ -284,7 +266,11 @@ const HomeScreen = () => {
                   >
                     <View className="flex-row">
                       <Image
-                        source={{ uri: provider.image }}
+                        source={{
+                          uri:
+                            provider.profilePhoto ||
+                            `https://i.pravatar.cc/150?u=${provider.userId}`,
+                        }}
                         className="w-20 h-20 rounded-xl"
                       />
 
@@ -306,34 +292,38 @@ const HomeScreen = () => {
                         </View>
 
                         <Text className="text-sm text-gray-600 mb-2">
-                          {provider.service}
+                          {getPrimaryService(provider)}
                         </Text>
 
-                        <View className="flex-row mb-2">
-                          {provider.specialties.map((specialty, index) => (
-                            <View
-                              key={index}
-                              className="bg-blue-50 rounded-full px-2 py-1 mr-2"
-                            >
-                              <Text className="text-xs text-blue-700">
-                                {specialty}
-                              </Text>
-                            </View>
-                          ))}
-                        </View>
+                        {getSpecialties(provider).length > 0 && (
+                          <View className="flex-row mb-2">
+                            {getSpecialties(provider).map(
+                              (specialty, index) => (
+                                <View
+                                  key={index}
+                                  className="bg-blue-50 rounded-full px-2 py-1 mr-2"
+                                >
+                                  <Text className="text-xs text-blue-700">
+                                    {specialty}
+                                  </Text>
+                                </View>
+                              )
+                            )}
+                          </View>
+                        )}
 
                         <View className="flex-row items-center justify-between">
                           <View className="flex-row items-center">
                             <Ionicons name="star" size={16} color="#fbbf24" />
                             <Text className="text-sm font-semibold text-gray-700 ml-1">
-                              {provider.rating}
+                              {provider.rating.toFixed(1)}
                             </Text>
                             <Text className="text-xs text-gray-500 ml-1">
-                              ({provider.reviews})
+                              ({provider.totalReviews})
                             </Text>
                           </View>
                           <Text className="text-sm font-semibold text-blue-600">
-                            {provider.price}
+                            ${provider.hourlyRate}/hr
                           </Text>
                         </View>
                       </View>
@@ -344,8 +334,23 @@ const HomeScreen = () => {
                 <View className="items-center justify-center py-12">
                   <Ionicons name="search-outline" size={64} color="#d1d5db" />
                   <Text className="text-gray-500 text-base mt-4">
-                    No providers found for {selectedCategory}
+                    No providers found
+                    {searchQuery
+                      ? ` for "${searchQuery}"`
+                      : selectedCategory !== "All"
+                      ? ` for ${selectedCategory}`
+                      : ""}
                   </Text>
+                  {!loadingProviders && providers.length === 0 && (
+                    <TouchableOpacity
+                      onPress={fetchProviders}
+                      className="mt-4 bg-blue-600 px-6 py-3 rounded-xl"
+                    >
+                      <Text className="text-white font-semibold">
+                        Retry Loading
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
 

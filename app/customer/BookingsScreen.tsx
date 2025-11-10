@@ -1,126 +1,114 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
-import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { auth } from "../config/firebase";
+import { getCustomerBookings } from "../services/apiService";
 
-type Booking = {
-  id: number;
-  provider: string;
-  service: string;
+interface Booking {
+  _id: string;
+  customerId: string;
+  providerId: string;
+  serviceType: string;
   category: string;
-  date: string;
-  time: string;
-  price: string;
-  status: string;
-  image: string;
-  address: string;
-  rated?: boolean;
-  reason?: string;
-};
+  scheduledDate: string;
+  timeSlot: string;
+  serviceAddress: string;
+  additionalNotes?: string;
+  status: "pending" | "confirmed" | "in-progress" | "completed" | "cancelled";
+  pricing: {
+    hourlyRate: number;
+    estimatedHours: number;
+    platformFee: number;
+    totalAmount: number;
+  };
+  customerDetails: {
+    name: string;
+    phone: string;
+    email: string;
+  };
+  providerDetails: {
+    name: string;
+    phone: string;
+    email: string;
+    profilePhoto?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
 
 const BookingsScreen = () => {
-  const [activeTab, setActiveTab] = React.useState<
-    "upcoming" | "completed" | "cancelled"
-  >("upcoming");
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "all" | "pending" | "confirmed" | "completed"
+  >("all");
 
-  const bookings: {
-    [key in "upcoming" | "completed" | "cancelled"]: Booking[];
-  } = {
-    upcoming: [
-      {
-        id: 1,
-        provider: "John Silva",
-        service: "Electrical Services",
-        category: "Wiring Installation",
-        date: "Oct 10, 2025",
-        time: "2:00 PM - 4:00 PM",
-        price: "$100",
-        status: "confirmed",
-        image: "https://i.pravatar.cc/150?img=12",
-        address: "123 Main Street, Colombo",
-      },
-      {
-        id: 2,
-        provider: "Sarah Perera",
-        service: "Plumbing Services",
-        category: "Pipe Repair",
-        date: "Oct 12, 2025",
-        time: "10:00 AM - 12:00 PM",
-        price: "$90",
-        status: "pending",
-        image: "https://i.pravatar.cc/150?img=45",
-        address: "456 Lake Road, Kandy",
-      },
-      {
-        id: 3,
-        provider: "Ahmed Hassan",
-        service: "HVAC Services",
-        category: "AC Installation",
-        date: "Oct 15, 2025",
-        time: "9:00 AM - 1:00 PM",
-        price: "$260",
-        status: "confirmed",
-        image: "https://i.pravatar.cc/150?img=52",
-        address: "789 Beach Avenue, Galle",
-      },
-    ],
-    completed: [
-      {
-        id: 4,
-        provider: "Mike Fernando",
-        service: "Construction Work",
-        category: "Wall Renovation",
-        date: "Oct 05, 2025",
-        time: "8:00 AM - 5:00 PM",
-        price: "$480",
-        status: "completed",
-        image: "https://i.pravatar.cc/150?img=33",
-        address: "321 Hill Street, Nuwara Eliya",
-        rated: true,
-      },
-      {
-        id: 5,
-        provider: "Lisa Jayawardena",
-        service: "Painting Services",
-        category: "Interior Painting",
-        date: "Sep 28, 2025",
-        time: "9:00 AM - 4:00 PM",
-        price: "$280",
-        status: "completed",
-        image: "https://i.pravatar.cc/150?img=47",
-        address: "654 Garden Lane, Colombo",
-        rated: false,
-      },
-    ],
-    cancelled: [
-      {
-        id: 6,
-        provider: "David Kumar",
-        service: "Carpentry Services",
-        category: "Furniture Assembly",
-        date: "Oct 01, 2025",
-        time: "3:00 PM - 5:00 PM",
-        price: "$80",
-        status: "cancelled",
-        image: "https://i.pravatar.cc/150?img=51",
-        address: "987 Park Road, Jaffna",
-        reason: "Provider unavailable",
-      },
-    ],
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) {
+        console.error("No authenticated user");
+        return;
+      }
+
+      const response = await getCustomerBookings(currentUser.uid);
+
+      if (response.success && response.data) {
+        setBookings(response.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchBookings();
+    setRefreshing(false);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "confirmed":
-        return "bg-green-100 text-green-700";
+        return "bg-green-100 text-green-700 border-green-200";
       case "pending":
-        return "bg-yellow-100 text-yellow-700";
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "in-progress":
+        return "bg-purple-100 text-purple-700 border-purple-200";
       case "completed":
-        return "bg-blue-100 text-blue-700";
+        return "bg-blue-100 text-blue-700 border-blue-200";
       case "cancelled":
-        return "bg-red-100 text-red-700";
+        return "bg-red-100 text-red-700 border-red-200";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "bg-gray-100 text-gray-700 border-gray-200";
     }
   };
 
@@ -130,6 +118,8 @@ const BookingsScreen = () => {
         return "checkmark-circle";
       case "pending":
         return "time";
+      case "in-progress":
+        return "hourglass";
       case "completed":
         return "checkmark-done-circle";
       case "cancelled":
@@ -139,222 +129,203 @@ const BookingsScreen = () => {
     }
   };
 
-  const currentBookings = bookings[activeTab];
+  const filteredBookings = bookings.filter((booking) => {
+    if (activeTab === "all") return true;
+    return booking.status === activeTab;
+  });
 
-  return (
-    <View className="flex-1 bg-gray-50">
-      <View className="bg-white px-6 pt-12 pb-4 border-b border-gray-200">
-        <Text className="text-2xl font-bold text-gray-800 mb-4">
-          My Bookings
-        </Text>
-
-        <View className="flex-row bg-gray-100 rounded-full p-1">
-          <TouchableOpacity
-            onPress={() => setActiveTab("upcoming")}
-            className={`flex-1 py-2 rounded-full ${
-              activeTab === "upcoming" ? "bg-white" : ""
-            }`}
+  const renderBookingCard = ({ item }: { item: Booking }) => (
+    <TouchableOpacity
+      onPress={() =>
+        router.push({
+          pathname: "/customer/BookingDetailsScreen",
+          params: { bookingId: item._id },
+        })
+      }
+      className="bg-white mx-6 mb-4 rounded-2xl border border-gray-200 overflow-hidden"
+    >
+      {/* Status Badge */}
+      <View className="px-4 pt-4 pb-3 border-b border-gray-100">
+        <View className="flex-row items-center justify-between">
+          <View
+            className={`flex-row items-center px-3 py-1.5 rounded-full border ${getStatusColor(
+              item.status
+            )}`}
           >
+            <Ionicons
+              name={getStatusIcon(item.status)}
+              size={16}
+              color={
+                item.status === "confirmed"
+                  ? "#15803d"
+                  : item.status === "pending"
+                  ? "#a16207"
+                  : item.status === "in-progress"
+                  ? "#7c3aed"
+                  : item.status === "completed"
+                  ? "#1e40af"
+                  : "#b91c1c"
+              }
+            />
             <Text
-              className={`text-center text-sm font-medium ${
-                activeTab === "upcoming" ? "text-blue-600" : "text-gray-600"
+              className={`ml-1.5 text-sm font-semibold capitalize ${
+                item.status === "confirmed"
+                  ? "text-green-700"
+                  : item.status === "pending"
+                  ? "text-yellow-700"
+                  : item.status === "in-progress"
+                  ? "text-purple-700"
+                  : item.status === "completed"
+                  ? "text-blue-700"
+                  : "text-red-700"
               }`}
             >
-              Upcoming
+              {item.status}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab("completed")}
-            className={`flex-1 py-2 rounded-full ${
-              activeTab === "completed" ? "bg-white" : ""
-            }`}
-          >
-            <Text
-              className={`text-center text-sm font-medium ${
-                activeTab === "completed" ? "text-blue-600" : "text-gray-600"
-              }`}
-            >
-              Completed
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab("cancelled")}
-            className={`flex-1 py-2 rounded-full ${
-              activeTab === "cancelled" ? "bg-white" : ""
-            }`}
-          >
-            <Text
-              className={`text-center text-sm font-medium ${
-                activeTab === "cancelled" ? "text-blue-600" : "text-gray-600"
-              }`}
-            >
-              Cancelled
-            </Text>
-          </TouchableOpacity>
+          </View>
+          <Text className="text-xs text-gray-500">
+            {formatDate(item.createdAt)}
+          </Text>
         </View>
       </View>
 
-      <ScrollView
-        className="flex-1 px-4 py-4"
-        showsVerticalScrollIndicator={false}
-      >
-        {currentBookings.length > 0 ? (
-          currentBookings.map((booking) => (
-            <TouchableOpacity
-              key={booking.id}
-              onPress={() =>
-                router.push({
-                  pathname: "/customer/BookingDetailsScreen",
-                  params: {
-                    id: booking.id,
-                    provider: booking.provider,
-                    service: booking.service,
-                    category: booking.category,
-                    date: booking.date,
-                    time: booking.time,
-                    price: booking.price,
-                    status: booking.status,
-                    image: booking.image,
-                    address: booking.address,
-                  },
-                })
-              }
-              className="bg-white rounded-2xl p-4 mb-4 border border-gray-200 shadow-sm"
-            >
-              <View className="flex-row items-center justify-between mb-3">
-                <View
-                  className={`flex-row items-center px-3 py-1 rounded-full ${getStatusColor(
-                    booking.status
-                  )}`}
-                >
-                  <Ionicons
-                    name={getStatusIcon(booking.status)}
-                    size={14}
-                    color={
-                      booking.status === "confirmed"
-                        ? "#15803d"
-                        : booking.status === "pending"
-                        ? "#a16207"
-                        : booking.status === "completed"
-                        ? "#1e40af"
-                        : "#b91c1c"
-                    }
-                  />
-                  <Text
-                    className={`ml-1 text-xs font-semibold capitalize ${
-                      booking.status === "confirmed"
-                        ? "text-green-700"
-                        : booking.status === "pending"
-                        ? "text-yellow-700"
-                        : booking.status === "completed"
-                        ? "text-blue-700"
-                        : "text-red-700"
-                    }`}
-                  >
-                    {booking.status}
-                  </Text>
-                </View>
-                <Text className="text-lg font-bold text-blue-600">
-                  {booking.price}
-                </Text>
-              </View>
+      {/* Provider Info */}
+      <View className="p-4">
+        <View className="flex-row items-center mb-3">
+          <Image
+            source={{
+              uri:
+                item.providerDetails.profilePhoto ||
+                `https://i.pravatar.cc/150?u=${item.providerId}`,
+            }}
+            className="w-12 h-12 rounded-xl"
+          />
+          <View className="flex-1 ml-3">
+            <Text className="text-base font-bold text-gray-800">
+              {item.providerDetails.name}
+            </Text>
+            <Text className="text-sm text-gray-600">{item.serviceType}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+        </View>
 
-              <View className="flex-row mb-3">
-                <Image
-                  source={{ uri: booking.image }}
-                  className="w-16 h-16 rounded-xl"
-                />
-                <View className="flex-1 ml-3">
-                  <Text className="text-lg font-semibold text-gray-800 mb-1">
-                    {booking.provider}
-                  </Text>
-                  <Text className="text-sm text-gray-600 mb-1">
-                    {booking.service}
-                  </Text>
-                  <View className="bg-blue-50 px-2 py-1 rounded-full self-start">
-                    <Text className="text-xs text-blue-700">
-                      {booking.category}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              <View className="bg-gray-50 rounded-xl p-3 mb-3">
-                <View className="flex-row items-center mb-2">
-                  <Ionicons name="calendar-outline" size={16} color="#6b7280" />
-                  <Text className="text-sm text-gray-700 ml-2">
-                    {booking.date}
-                  </Text>
-                </View>
-                <View className="flex-row items-center mb-2">
-                  <Ionicons name="time-outline" size={16} color="#6b7280" />
-                  <Text className="text-sm text-gray-700 ml-2">
-                    {booking.time}
-                  </Text>
-                </View>
-                <View className="flex-row items-start">
-                  <Ionicons name="location-outline" size={16} color="#6b7280" />
-                  <Text className="text-sm text-gray-700 ml-2 flex-1">
-                    {booking.address}
-                  </Text>
-                </View>
-              </View>
-
-              {activeTab === "upcoming" && (
-                <View className="flex-row gap-2">
-                  <TouchableOpacity className="flex-1 bg-blue-600 py-3 rounded-xl flex-row items-center justify-center">
-                    <Ionicons name="chatbox-outline" size={18} color="white" />
-                    <Text className="text-white font-semibold ml-2">
-                      Message
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity className="flex-1 bg-gray-200 py-3 rounded-xl flex-row items-center justify-center">
-                    <Ionicons name="close" size={18} color="#4b5563" />
-                    <Text className="text-gray-700 font-semibold ml-2">
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {activeTab === "completed" && !booking.rated && (
-                <TouchableOpacity className="bg-yellow-400 py-3 rounded-xl flex-row items-center justify-center">
-                  <Ionicons name="star-outline" size={18} color="#1f2937" />
-                  <Text className="text-gray-900 font-semibold ml-2">
-                    Rate Service
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {activeTab === "completed" && booking.rated && (
-                <View className="bg-green-50 py-3 rounded-xl flex-row items-center justify-center">
-                  <Ionicons name="checkmark-circle" size={18} color="#15803d" />
-                  <Text className="text-green-700 font-semibold ml-2">
-                    Reviewed
-                  </Text>
-                </View>
-              )}
-
-              {activeTab === "cancelled" && booking.reason && (
-                <View className="bg-red-50 py-2 px-3 rounded-xl">
-                  <Text className="text-xs text-red-700">
-                    Reason: {booking.reason}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))
-        ) : (
-          <View className="items-center justify-center py-20">
-            <Ionicons name="calendar-outline" size={64} color="#d1d5db" />
-            <Text className="text-gray-500 text-base mt-4">
-              No {activeTab} bookings
+        {/* Booking Details */}
+        <View className="space-y-2">
+          <View className="flex-row items-center">
+            <Ionicons name="calendar-outline" size={16} color="#6b7280" />
+            <Text className="text-sm text-gray-700 ml-2">
+              {formatDate(item.scheduledDate)} • {item.timeSlot}
             </Text>
           </View>
-        )}
+          <View className="flex-row items-center">
+            <Ionicons name="location-outline" size={16} color="#6b7280" />
+            <Text
+              className="text-sm text-gray-700 ml-2 flex-1"
+              numberOfLines={1}
+            >
+              {item.serviceAddress}
+            </Text>
+          </View>
+          <View className="flex-row items-center justify-between pt-2 border-t border-gray-100">
+            <Text className="text-sm text-gray-600">Total Amount</Text>
+            <Text className="text-lg font-bold text-blue-600">
+              ${item.pricing.totalAmount}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
-        <View className="h-4" />
-      </ScrollView>
+  const renderEmptyState = () => (
+    <View className="flex-1 items-center justify-center px-6 py-12">
+      <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-4">
+        <Ionicons name="calendar-outline" size={48} color="#9ca3af" />
+      </View>
+      <Text className="text-xl font-bold text-gray-800 mb-2">
+        No Bookings Yet
+      </Text>
+      <Text className="text-center text-gray-600 mb-6">
+        {activeTab === "all"
+          ? "You haven't made any bookings yet. Start exploring services!"
+          : `You don't have any ${activeTab} bookings.`}
+      </Text>
+      <TouchableOpacity
+        onPress={() => router.push("/customer/HomeScreen")}
+        className="bg-blue-600 px-6 py-3 rounded-xl"
+      >
+        <Text className="text-white font-semibold">Browse Services</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-gray-50 items-center justify-center">
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text className="text-gray-500 mt-4">Loading bookings...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View className="flex-1 bg-gray-50">
+      {/* Header */}
+      <View className="bg-white px-6 pt-12 pb-4 border-b border-gray-200">
+        <View className="flex-row items-center justify-between mb-4">
+          <Text className="text-2xl font-bold text-gray-800">My Bookings</Text>
+          <TouchableOpacity>
+            <Ionicons name="search-outline" size={24} color="#6b7280" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Filter Tabs */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="flex-row"
+        >
+          {[
+            { key: "all", label: "All" },
+            { key: "pending", label: "Pending" },
+            { key: "confirmed", label: "Confirmed" },
+            { key: "completed", label: "Completed" },
+          ].map((tab) => (
+            <TouchableOpacity
+              key={tab.key}
+              onPress={() => setActiveTab(tab.key as any)}
+              className={`mr-3 px-4 py-2 rounded-xl ${
+                activeTab === tab.key ? "bg-blue-600" : "bg-gray-100"
+              }`}
+            >
+              <Text
+                className={`font-semibold ${
+                  activeTab === tab.key ? "text-white" : "text-gray-700"
+                }`}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Bookings List */}
+      <FlatList
+        data={filteredBookings}
+        renderItem={renderBookingCard}
+        keyExtractor={(item) => item._id}
+        contentContainerStyle={
+          filteredBookings.length === 0
+            ? { flex: 1 }
+            : { paddingTop: 16, paddingBottom: 16 }
+        }
+        ListEmptyComponent={renderEmptyState}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 };

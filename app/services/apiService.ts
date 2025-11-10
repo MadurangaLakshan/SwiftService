@@ -120,8 +120,24 @@ export const searchProviders = async (filters: {
   });
 };
 
-export const getAllProviders = async () => {
-  return authenticatedRequest("/providers", {
+export const getAllProviders = async (filters?: {
+  service?: string;
+  city?: string;
+}) => {
+  let endpoint = "/providers";
+
+  if (filters) {
+    const params = new URLSearchParams();
+    if (filters.service) params.append("service", filters.service);
+    if (filters.city) params.append("city", filters.city);
+
+    const queryString = params.toString();
+    if (queryString) {
+      endpoint = `/providers?${queryString}`;
+    }
+  }
+
+  return authenticatedRequest(endpoint, {
     method: "GET",
   });
 };
@@ -159,21 +175,8 @@ export const deleteCustomerProfile = async (userId: string) => {
   });
 };
 
-export const createBooking = async (bookingData: any) => {
-  return authenticatedRequest("/bookings", {
-    method: "POST",
-    body: JSON.stringify(bookingData),
-  });
-};
-
 export const getBooking = async (bookingId: string) => {
   return authenticatedRequest(`/bookings/${bookingId}`, {
-    method: "GET",
-  });
-};
-
-export const getCustomerBookings = async (customerId: string) => {
-  return authenticatedRequest(`/bookings/customer/${customerId}`, {
     method: "GET",
   });
 };
@@ -204,6 +207,42 @@ export const createReview = async (reviewData: any) => {
 export const getProviderReviews = async (providerId: string) => {
   return authenticatedRequest(`/reviews/provider/${providerId}`, {
     method: "GET",
+  });
+};
+
+export const createBooking = async (bookingData: {
+  providerId: string;
+  serviceType: string;
+  category: string;
+  scheduledDate: string;
+  timeSlot: string;
+  serviceAddress: string;
+  additionalNotes?: string;
+  hourlyRate: number;
+  estimatedHours?: number;
+}) => {
+  return authenticatedRequest("/bookings", {
+    method: "POST",
+    body: JSON.stringify(bookingData),
+  });
+};
+
+export const getCustomerBookings = async (customerId: string) => {
+  return authenticatedRequest(`/bookings/customer/${customerId}`, {
+    method: "GET",
+  });
+};
+
+export const getBookingById = async (bookingId: string) => {
+  return authenticatedRequest(`/bookings/${bookingId}`, {
+    method: "GET",
+  });
+};
+
+export const cancelBooking = async (bookingId: string, reason: string) => {
+  return authenticatedRequest(`/bookings/${bookingId}/cancel`, {
+    method: "PUT",
+    body: JSON.stringify({ reason }),
   });
 };
 

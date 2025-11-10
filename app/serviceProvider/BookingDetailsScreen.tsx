@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Modal,
   ScrollView,
@@ -9,24 +10,130 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import {
+  cancelBooking,
+  getBookingById,
+  updateBookingStatus,
+} from "../services/apiService";
+
+interface Booking {
+  _id: string;
+  customerDetails: {
+    name: string;
+    phone: string;
+    email: string;
+    image?: string;
+  };
+  providerDetails: {
+    name: string;
+    phone: string;
+    email: string;
+    profilePhoto?: string;
+  };
+  category: string;
+  serviceType: string;
+  status: string;
+  scheduledDate: string;
+  timeSlot: string;
+  pricing: {
+    hourlyRate: number;
+    estimatedHours: number;
+    platformFee: number;
+    totalAmount: number;
+  };
+  serviceAddress: string;
+  additionalNotes?: string;
+}
 
 const BookingDetailsScreen = () => {
   const params = useLocalSearchParams();
-  const {
-    provider,
-    service,
-    category,
-    date,
-    time,
-    price,
-    status,
-    image,
-    address,
-  } = params;
+  const { bookingId } = params;
 
-  const [showCancelModal, setShowCancelModal] = React.useState(false);
-  const [showRatingModal, setShowRatingModal] = React.useState(false);
-  const [rating, setRating] = React.useState(0);
+  const [booking, setBooking] = useState<Booking | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    if (bookingId) {
+      fetchBookingDetails();
+    }
+  }, [bookingId]);
+
+  const fetchBookingDetails = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getBookingById(bookingId as string);
+
+      if (response.success) {
+        setBooking(response.data.data);
+      } else {
+        setError(response.error || "Failed to fetch booking details");
+      }
+    } catch (err: any) {
+      console.error("Error fetching booking:", err);
+      setError(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusUpdate = async (newStatus: string) => {
+    try {
+      setActionLoading(true);
+      const response = await updateBookingStatus(
+        bookingId as string,
+        newStatus
+      );
+
+      if (response.success) {
+        setBooking(response.data);
+      } else {
+        alert("Failed to update booking status");
+      }
+    } catch (err) {
+      console.error("Error updating status:", err);
+      alert("An error occurred");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    try {
+      setActionLoading(true);
+      const response = await cancelBooking(
+        bookingId as string,
+        "Cancelled by provider"
+      );
+
+      if (response.success) {
+        setShowCancelModal(false);
+        setBooking(response.data);
+      } else {
+        alert("Failed to cancel booking");
+      }
+    } catch (err) {
+      console.error("Error cancelling booking:", err);
+      alert("An error occurred");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -38,6 +145,8 @@ const BookingDetailsScreen = () => {
         return "bg-blue-100 text-blue-700 border-blue-200";
       case "cancelled":
         return "bg-red-100 text-red-700 border-red-200";
+      case "in-progress":
+        return "bg-purple-100 text-purple-700 border-purple-200";
       default:
         return "bg-gray-100 text-gray-700 border-gray-200";
     }
@@ -53,19 +162,50 @@ const BookingDetailsScreen = () => {
         return "checkmark-done-circle";
       case "cancelled":
         return "close-circle";
+      case "in-progress":
+        return "play-circle";
       default:
         return "help-circle";
     }
   };
 
+  const formatStatusLabel = (status: string) => {
+    if (!status) return "Unknown";
+    if (status === "in-progress") return "In Progress";
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text className="text-gray-600 mt-4">Loading booking details...</Text>
+      </View>
+    );
+  }
+
+  if (error || !booking) {
+    return (
+      <View className="flex-1 bg-white items-center justify-center px-6">
+        <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
+        <Text className="text-gray-800 text-lg font-semibold mt-4">
+          {error || "Booking not found"}
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="bg-blue-600 rounded-xl px-6 py-3 mt-4"
+        >
+          <Text className="text-white font-semibold">Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-gray-50">
       <View className="bg-white px-6 pt-12 pb-4 border-b border-gray-200">
         <View className="flex-row items-center justify-between">
-          <TouchableOpacity
-            onPress={() => router.push("/customer/BookingsScreen")}
-            className="mr-4"
-          >
+          <TouchableOpacity onPress={() => router.back()} className="mr-4">
             <Ionicons name="arrow-back" size={24} color="black" />
           </TouchableOpacity>
           <Text className="flex-1 text-xl font-bold text-gray-800">
@@ -80,54 +220,62 @@ const BookingDetailsScreen = () => {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View
           className={`mx-6 mt-6 p-4 rounded-2xl border ${getStatusColor(
-            status as string
+            booking.status
           )}`}
         >
           <View className="flex-row items-center">
             <Ionicons
-              name={getStatusIcon(status as string)}
+              name={getStatusIcon(booking.status)}
               size={24}
               color={
-                status === "confirmed"
+                booking.status === "confirmed"
                   ? "#15803d"
-                  : status === "pending"
+                  : booking.status === "pending"
                   ? "#a16207"
-                  : status === "completed"
+                  : booking.status === "completed"
                   ? "#1e40af"
+                  : booking.status === "in-progress"
+                  ? "#7c3aed"
                   : "#b91c1c"
               }
             />
             <View className="ml-3 flex-1">
               <Text
                 className={`text-lg font-bold capitalize ${
-                  status === "confirmed"
+                  booking.status === "confirmed"
                     ? "text-green-700"
-                    : status === "pending"
+                    : booking.status === "pending"
                     ? "text-yellow-700"
-                    : status === "completed"
+                    : booking.status === "completed"
                     ? "text-blue-700"
+                    : booking.status === "in-progress"
+                    ? "text-purple-700"
                     : "text-red-700"
                 }`}
               >
-                {status}
+                {formatStatusLabel(booking.status)}
               </Text>
               <Text
                 className={`text-sm ${
-                  status === "confirmed"
+                  booking.status === "confirmed"
                     ? "text-green-600"
-                    : status === "pending"
+                    : booking.status === "pending"
                     ? "text-yellow-600"
-                    : status === "completed"
+                    : booking.status === "completed"
                     ? "text-blue-600"
+                    : booking.status === "in-progress"
+                    ? "text-purple-600"
                     : "text-red-600"
                 }`}
               >
-                {status === "confirmed"
-                  ? "Your booking is confirmed"
-                  : status === "pending"
-                  ? "Waiting for provider confirmation"
-                  : status === "completed"
+                {booking.status === "confirmed"
+                  ? "Booking is confirmed"
+                  : booking.status === "pending"
+                  ? "Awaiting confirmation"
+                  : booking.status === "completed"
                   ? "Service completed successfully"
+                  : booking.status === "in-progress"
+                  ? "Service is in progress"
                   : "This booking was cancelled"}
               </Text>
             </View>
@@ -136,40 +284,32 @@ const BookingDetailsScreen = () => {
 
         <View className="mx-6 mt-4 bg-white rounded-2xl p-4 border border-gray-200">
           <Text className="text-sm font-semibold text-gray-500 mb-3">
-            SERVICE PROVIDER
+            CUSTOMER DETAILS
           </Text>
           <View className="flex-row items-center mb-4">
             <Image
-              source={{ uri: image as string }}
+              source={{
+                uri:
+                  booking.customerDetails.image ||
+                  `https://i.pravatar.cc/150?u=${booking.customerDetails.email}`,
+              }}
               className="w-16 h-16 rounded-xl"
             />
             <View className="flex-1 ml-4">
               <Text className="text-lg font-bold text-gray-800">
-                {provider}
+                {booking.customerDetails.name}
               </Text>
-              <Text className="text-sm text-gray-600">{service}</Text>
-              <View className="flex-row items-center mt-1">
-                <Ionicons name="star" size={14} color="#fbbf24" />
-                <Text className="text-sm text-gray-600 ml-1">4.8 (124)</Text>
-              </View>
+              <Text className="text-sm text-gray-600">
+                {booking.customerDetails.phone}
+              </Text>
+              <Text className="text-sm text-gray-600">
+                {booking.customerDetails.email}
+              </Text>
             </View>
           </View>
 
           <View className="flex-row gap-2">
-            <TouchableOpacity
-              onPress={() =>
-                router.push({
-                  pathname: "/customer/ChatScreen",
-                  params: {
-                    id: 1,
-                    name: provider,
-                    service: service,
-                    image: image,
-                  },
-                })
-              }
-              className="flex-1 bg-blue-600 py-3 rounded-xl flex-row items-center justify-center"
-            >
+            <TouchableOpacity className="flex-1 bg-blue-600 py-3 rounded-xl flex-row items-center justify-center">
               <Ionicons name="chatbox-outline" size={18} color="white" />
               <Text className="text-white font-semibold ml-2">Message</Text>
             </TouchableOpacity>
@@ -193,7 +333,10 @@ const BookingDetailsScreen = () => {
               <View className="flex-1 ml-4">
                 <Text className="text-xs text-gray-500 mb-1">Service</Text>
                 <Text className="text-base font-semibold text-gray-800">
-                  {category}
+                  {booking.category}
+                </Text>
+                <Text className="text-sm text-gray-600">
+                  {booking.serviceType}
                 </Text>
               </View>
             </View>
@@ -205,7 +348,7 @@ const BookingDetailsScreen = () => {
               <View className="flex-1 ml-4">
                 <Text className="text-xs text-gray-500 mb-1">Date</Text>
                 <Text className="text-base font-semibold text-gray-800">
-                  {date}
+                  {formatDate(booking.scheduledDate)}
                 </Text>
               </View>
             </View>
@@ -217,7 +360,7 @@ const BookingDetailsScreen = () => {
               <View className="flex-1 ml-4">
                 <Text className="text-xs text-gray-500 mb-1">Time</Text>
                 <Text className="text-base font-semibold text-gray-800">
-                  {time}
+                  {booking.timeSlot}
                 </Text>
               </View>
             </View>
@@ -229,10 +372,28 @@ const BookingDetailsScreen = () => {
               <View className="flex-1 ml-4">
                 <Text className="text-xs text-gray-500 mb-1">Location</Text>
                 <Text className="text-base font-semibold text-gray-800">
-                  {address}
+                  {booking.serviceAddress}
                 </Text>
               </View>
             </View>
+
+            {booking.additionalNotes && (
+              <View className="flex-row items-start py-3 border-t border-gray-100">
+                <View className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center">
+                  <Ionicons
+                    name="document-text-outline"
+                    size={20}
+                    color="#6b7280"
+                  />
+                </View>
+                <View className="flex-1 ml-4">
+                  <Text className="text-xs text-gray-500 mb-1">Notes</Text>
+                  <Text className="text-base text-gray-800">
+                    {booking.additionalNotes}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         </View>
 
@@ -243,17 +404,24 @@ const BookingDetailsScreen = () => {
 
           <View className="space-y-2">
             <View className="flex-row justify-between py-2">
-              <Text className="text-gray-600">Service Fee</Text>
-              <Text className="text-gray-800 font-medium">{price}</Text>
+              <Text className="text-gray-600">
+                Service Fee ({booking.pricing.estimatedHours}h × $
+                {booking.pricing.hourlyRate}/h)
+              </Text>
+              <Text className="text-gray-800 font-medium">
+                ${booking.pricing.hourlyRate * booking.pricing.estimatedHours}
+              </Text>
             </View>
             <View className="flex-row justify-between py-2">
               <Text className="text-gray-600">Platform Fee</Text>
-              <Text className="text-gray-800 font-medium">$5</Text>
+              <Text className="text-gray-800 font-medium">
+                ${booking.pricing.platformFee}
+              </Text>
             </View>
             <View className="flex-row justify-between py-2 border-t border-gray-200 pt-3">
               <Text className="text-lg font-bold text-gray-800">Total</Text>
               <Text className="text-lg font-bold text-blue-600">
-                ${parseInt((price as string).replace("$", "")) + 5}
+                ${booking.pricing.totalAmount}
               </Text>
             </View>
           </View>
@@ -262,38 +430,85 @@ const BookingDetailsScreen = () => {
         <View className="mx-6 mt-4 mb-6 bg-gray-100 rounded-2xl p-4">
           <Text className="text-xs text-gray-500 mb-1">Booking ID</Text>
           <Text className="text-sm font-mono font-semibold text-gray-800">
-            #BK{Math.floor(Math.random() * 1000000)}
+            #{booking._id.slice(-8).toUpperCase()}
           </Text>
         </View>
       </ScrollView>
 
-      {status === "upcoming" ||
-      status === "pending" ||
-      status === "confirmed" ? (
+      {booking.status === "pending" && (
+        <View className="bg-white px-6 py-4 border-t border-gray-200">
+          <View className="flex-row gap-3">
+            <TouchableOpacity
+              onPress={() => handleStatusUpdate("confirmed")}
+              disabled={actionLoading}
+              className="flex-1 bg-green-600 py-4 rounded-xl flex-row items-center justify-center"
+            >
+              {actionLoading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={24} color="white" />
+                  <Text className="text-white font-bold text-base ml-2">
+                    Accept
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowCancelModal(true)}
+              disabled={actionLoading}
+              className="flex-1 bg-red-50 border border-red-200 py-4 rounded-xl flex-row items-center justify-center"
+            >
+              <Ionicons name="close-circle-outline" size={24} color="#ef4444" />
+              <Text className="text-red-600 font-bold text-base ml-2">
+                Decline
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {booking.status === "confirmed" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <TouchableOpacity
-            onPress={() => setShowCancelModal(true)}
-            className="bg-red-50 border border-red-200 py-4 rounded-xl flex-row items-center justify-center"
+            onPress={() => handleStatusUpdate("in-progress")}
+            disabled={actionLoading}
+            className="bg-purple-600 py-4 rounded-xl flex-row items-center justify-center"
           >
-            <Ionicons name="close-circle-outline" size={24} color="#ef4444" />
-            <Text className="text-red-600 font-bold text-base ml-2">
-              Cancel Booking
-            </Text>
+            {actionLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <Ionicons name="play-circle" size={24} color="white" />
+                <Text className="text-white font-bold text-base ml-2">
+                  Start Job
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
-      ) : status === "completed" ? (
+      )}
+
+      {booking.status === "in-progress" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <TouchableOpacity
-            onPress={() => setShowRatingModal(true)}
-            className="bg-yellow-400 py-4 rounded-xl flex-row items-center justify-center"
+            onPress={() => handleStatusUpdate("completed")}
+            disabled={actionLoading}
+            className="bg-green-600 py-4 rounded-xl flex-row items-center justify-center"
           >
-            <Ionicons name="star-outline" size={24} color="#1f2937" />
-            <Text className="text-gray-900 font-bold text-base ml-2">
-              Rate Service
-            </Text>
+            {actionLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-done" size={24} color="white" />
+                <Text className="text-white font-bold text-base ml-2">
+                  Complete Job
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
-      ) : null}
+      )}
 
       <Modal
         visible={showCancelModal}
@@ -308,16 +523,17 @@ const BookingDetailsScreen = () => {
                 <Ionicons name="warning-outline" size={32} color="#ef4444" />
               </View>
               <Text className="text-xl font-bold text-gray-800 mb-2">
-                Cancel Booking?
+                Decline Booking?
               </Text>
               <Text className="text-center text-gray-600">
-                Are you sure you want to cancel this booking? This action cannot
-                be undone.
+                Are you sure you want to decline this booking? This action
+                cannot be undone.
               </Text>
             </View>
             <View className="flex-row gap-3">
               <TouchableOpacity
                 onPress={() => setShowCancelModal(false)}
+                disabled={actionLoading}
                 className="flex-1 bg-gray-100 py-3 rounded-xl"
               >
                 <Text className="text-center text-gray-700 font-semibold">
@@ -325,74 +541,17 @@ const BookingDetailsScreen = () => {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => {
-                  setShowCancelModal(false);
-                  router.push("/customer/BookingsScreen");
-                }}
+                onPress={handleCancelBooking}
+                disabled={actionLoading}
                 className="flex-1 bg-red-600 py-3 rounded-xl"
               >
-                <Text className="text-center text-white font-semibold">
-                  Yes, Cancel
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={showRatingModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowRatingModal(false)}
-      >
-        <View className="flex-1 bg-black/50 items-center justify-end">
-          <View className="bg-white rounded-t-3xl p-6 w-full">
-            <View className="items-center mb-6">
-              <Text className="text-xl font-bold text-gray-800 mb-2">
-                Rate Your Experience
-              </Text>
-              <Text className="text-center text-gray-600">
-                How was your experience with {provider}?
-              </Text>
-            </View>
-
-            <View className="flex-row justify-center mb-6">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <TouchableOpacity
-                  key={star}
-                  onPress={() => setRating(star)}
-                  className="mx-2"
-                >
-                  <Ionicons
-                    name={star <= rating ? "star" : "star-outline"}
-                    size={40}
-                    color={star <= rating ? "#fbbf24" : "#d1d5db"}
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                onPress={() => setShowRatingModal(false)}
-                className="flex-1 bg-gray-100 py-4 rounded-xl"
-              >
-                <Text className="text-center text-gray-700 font-semibold">
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowRatingModal(false);
-                  // Add rating logic here
-                }}
-                className="flex-1 bg-blue-600 py-4 rounded-xl"
-                disabled={rating === 0}
-              >
-                <Text className="text-center text-white font-semibold">
-                  Submit Rating
-                </Text>
+                {actionLoading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-center text-white font-semibold">
+                    Yes, Decline
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Image,
+  ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -13,109 +13,120 @@ import {
   View,
 } from "react-native";
 import { useProvider } from "../context/ProviderContext";
+import { getProviderBookings } from "../services/apiService";
+
+interface Booking {
+  _id: string;
+  customerDetails: {
+    name: string;
+    phone: string;
+    email: string;
+  };
+  category: string;
+  status: string;
+  scheduledDate: string;
+  timeSlot: string;
+  pricing: {
+    totalAmount: number;
+  };
+  serviceAddress: string;
+}
 
 const HomeScreen = () => {
-  const [selectedStatus, setSelectedStatus] = React.useState("All");
-  const { providerData, loading } = useProvider();
+  const { providerData, loading: providerLoading } = useProvider();
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const statusFilters = [
-    "All",
-    "Pending",
-    "Confirmed",
-    "In Progress",
-    "Completed",
-  ];
+  useEffect(() => {
+    if (providerData?.userId) {
+      fetchBookings();
+    }
+  }, [providerData]);
 
-  // Mock bookings data - replace with actual API call
-  const bookings = [
-    {
-      id: 1,
-      customerName: "Kamal Perera",
-      service: "Electrical Wiring",
-      status: "Pending",
-      date: "2025-11-01",
-      time: "10:00 AM",
-      location: "Colombo 03",
-      price: "$150",
-      customerImage: "https://i.pravatar.cc/150?img=8",
-      urgent: true,
-    },
-    {
-      id: 2,
-      customerName: "Nimal Silva",
-      service: "Smart Home Installation",
-      status: "Confirmed",
-      date: "2025-11-02",
-      time: "2:00 PM",
-      location: "Nugegoda",
-      price: "$200",
-      customerImage: "https://i.pravatar.cc/150?img=15",
-      urgent: false,
-    },
-    {
-      id: 3,
-      customerName: "Anura Fernando",
-      service: "Electrical Repair",
-      status: "In Progress",
-      date: "2025-10-31",
-      time: "9:00 AM",
-      location: "Dehiwala",
-      price: "$80",
-      customerImage: "https://i.pravatar.cc/150?img=33",
-      urgent: false,
-    },
-    {
-      id: 4,
-      customerName: "Saman Jayawardena",
-      service: "Solar Panel Installation",
-      status: "Pending",
-      date: "2025-11-03",
-      time: "11:00 AM",
-      location: "Maharagama",
-      price: "$500",
-      customerImage: "https://i.pravatar.cc/150?img=60",
-      urgent: false,
-    },
-    {
-      id: 5,
-      customerName: "Ruwan Wickramasinghe",
-      service: "Electrical Maintenance",
-      status: "Completed",
-      date: "2025-10-28",
-      time: "3:00 PM",
-      location: "Mount Lavinia",
-      price: "$120",
-      customerImage: "https://i.pravatar.cc/150?img=25",
-      urgent: false,
-    },
-  ];
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getProviderBookings(providerData!.userId);
 
-  const stats = {
-    todayBookings: bookings.filter((b) => b.date === "2025-10-31").length,
-    pendingBookings: bookings.filter((b) => b.status === "Pending").length,
-    monthlyEarnings: "$2,450",
-    rating: providerData?.rating || 4.8,
+      if (response.success) {
+        // Get only the 3 most recent bookings for home screen
+        console.log(response.data);
+        const recentBookings = response.data.data.slice(0, 3);
+        setBookings(recentBookings);
+      } else {
+        setError(response.error || "Failed to fetch bookings");
+      }
+    } catch (err: any) {
+      console.error("Error fetching bookings:", err);
+      setError(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filteredBookings =
-    selectedStatus === "All"
-      ? bookings
-      : bookings.filter((booking) => booking.status === selectedStatus);
+  // Calculate pending requests
+  const pendingRequests = bookings.filter((b) => b.status === "pending");
+  const pendingCount = pendingRequests.length;
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return "Today";
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return "Tomorrow";
+    } else {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Pending":
+      case "pending":
         return "bg-yellow-100 text-yellow-700";
-      case "Confirmed":
+      case "confirmed":
         return "bg-blue-100 text-blue-700";
-      case "In Progress":
+      case "in-progress":
         return "bg-purple-100 text-purple-700";
-      case "Completed":
+      case "completed":
         return "bg-green-100 text-green-700";
       default:
         return "bg-gray-100 text-gray-700";
     }
   };
+
+  const getStatusLabel = (status: string) => {
+    return status === "in-progress"
+      ? "In Progress"
+      : status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
+  // Mock performance data (you can create another API endpoint for this)
+  const performanceData = {
+    jobs: bookings.filter((b) => b.status === "completed").length,
+    earned: bookings
+      .filter((b) => b.status === "completed")
+      .reduce((sum, b) => sum + b.pricing.totalAmount, 0),
+    rating: 4.8,
+  };
+
+  if (providerLoading || loading) {
+    return (
+      <View className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text className="text-gray-600 mt-4">Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-white">
@@ -125,29 +136,15 @@ const HomeScreen = () => {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View className="flex-1">
-            <View className="px-6">
-              <View className="flex-row items-center gap-2 mt-12 mb-6 justify-center">
-                <Image
-                  source={require("../../assets/images/SwiftService.png")}
-                  className="w-16 h-16"
-                />
-                <Text className="text-2xl font-bold">
-                  <Text className="text-blue-700">Swift</Text>
-                  <Text className="text-gray-700">Service</Text>
-                  <Text className="text-xs text-gray-500"> Pro</Text>
-                </Text>
-              </View>
-
-              <View className="flex-row items-center justify-between w-full mb-4">
+            {/* HEADER */}
+            <View className="px-6 pt-16">
+              <View className="flex-row items-center justify-between w-full mb-6">
                 <View>
                   <Text className="text-2xl font-semibold text-gray-800">
-                    <Text>Welcome back, </Text>
-                    <Text className="text-blue-700">
-                      {providerData?.name ?? "Provider"}
-                    </Text>
+                    Welcome back,
                   </Text>
-                  <Text className="text-lg text-gray-500">
-                    Ready to work today?
+                  <Text className="text-2xl font-bold text-blue-700">
+                    {providerData?.name ?? "Provider"}
                   </Text>
                 </View>
 
@@ -162,10 +159,10 @@ const HomeScreen = () => {
                       size={28}
                       color="black"
                     />
-                    {stats.pendingBookings > 0 && (
+                    {pendingCount > 0 && (
                       <View className="absolute -top-1 -right-1 bg-red-500 rounded-full w-5 h-5 items-center justify-center">
                         <Text className="text-white text-xs font-bold">
-                          {stats.pendingBookings}
+                          {pendingCount}
                         </Text>
                       </View>
                     )}
@@ -173,114 +170,127 @@ const HomeScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              {/* Stats Cards */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                className="mb-6"
-              >
-                <View className="bg-blue-50 rounded-2xl p-4 mr-3 w-36">
-                  <Ionicons name="calendar-outline" size={24} color="#3b82f6" />
-                  <Text className="text-2xl font-bold text-gray-800 mt-2">
-                    {stats.todayBookings}
-                  </Text>
-                  <Text className="text-sm text-gray-600">Today</Text>
-                </View>
-
-                <View className="bg-yellow-50 rounded-2xl p-4 mr-3 w-36">
-                  <Ionicons name="time-outline" size={24} color="#f59e0b" />
-                  <Text className="text-2xl font-bold text-gray-800 mt-2">
-                    {stats.pendingBookings}
-                  </Text>
-                  <Text className="text-sm text-gray-600">Pending</Text>
-                </View>
-
-                <View className="bg-green-50 rounded-2xl p-4 mr-3 w-36">
-                  <Ionicons name="cash-outline" size={24} color="#10b981" />
-                  <Text className="text-2xl font-bold text-gray-800 mt-2">
-                    {stats.monthlyEarnings}
-                  </Text>
-                  <Text className="text-sm text-gray-600">This Month</Text>
-                </View>
-
-                <View className="bg-purple-50 rounded-2xl p-4 w-36">
-                  <Ionicons name="star-outline" size={24} color="#8b5cf6" />
-                  <Text className="text-2xl font-bold text-gray-800 mt-2">
-                    {stats.rating}
-                  </Text>
-                  <Text className="text-sm text-gray-600">Rating</Text>
-                </View>
-              </ScrollView>
-
-              <View className="mb-4">
-                <Text className="text-lg font-semibold text-gray-800 mb-3">
-                  Filter Bookings 📋
-                </Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  className="flex-row"
-                >
-                  {statusFilters.map((status, index) => (
+              {/* WELCOME CARD */}
+              <View className="bg-blue-600 rounded-2xl p-6 mb-6">
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1">
+                    <Text className="text-white text-lg font-bold mb-2">
+                      Ready to work today?
+                    </Text>
+                    <Text className="text-blue-100 text-sm mb-4">
+                      You have {pendingCount} pending booking request
+                      {pendingCount !== 1 ? "s" : ""}.
+                    </Text>
                     <TouchableOpacity
-                      key={index}
-                      onPress={() => setSelectedStatus(status)}
-                      className={`mr-3 px-5 py-2.5 rounded-full ${
-                        selectedStatus === status
-                          ? "bg-blue-600"
-                          : "bg-gray-200"
-                      }`}
+                      onPress={() =>
+                        router.push("../serviceProvider/BookingsScreen")
+                      }
+                      className="bg-white rounded-xl px-4 py-2 self-start"
                     >
-                      <Text
-                        className={`font-medium ${
-                          selectedStatus === status
-                            ? "text-white"
-                            : "text-gray-700"
-                        }`}
-                      >
-                        {status}
+                      <Text className="text-blue-600 font-semibold">
+                        View Requests
                       </Text>
                     </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                  </View>
+                  <View className="w-20 h-20 bg-blue-500 rounded-full items-center justify-center">
+                    <Ionicons name="briefcase" size={40} color="white" />
+                  </View>
+                </View>
               </View>
             </View>
 
             <ScrollView
-              className="flex-1 px-6"
+              className="flex-1"
               showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 24 }}
             >
-              <Text className="text-lg font-semibold text-gray-800 mb-4">
-                {selectedStatus === "All"
-                  ? "All Bookings"
-                  : `${selectedStatus} Bookings`}
-              </Text>
+              {/* Performance Summary Card */}
+              <View className="bg-gray-50 rounded-2xl p-4 my-4 border border-gray-200">
+                <Text className="text-sm font-semibold text-gray-500 uppercase mb-3">
+                  Overall Performance
+                </Text>
+                <View className="flex-row justify-between">
+                  <View className="items-center">
+                    <Text className="text-2xl font-bold text-gray-800">
+                      {performanceData.jobs}
+                    </Text>
+                    <Text className="text-xs text-gray-600">Jobs</Text>
+                  </View>
+                  <View className="items-center">
+                    <Text className="text-2xl font-bold text-green-600">
+                      ${performanceData.earned}
+                    </Text>
+                    <Text className="text-xs text-gray-600">Earned</Text>
+                  </View>
+                  <View className="items-center">
+                    <Text className="text-2xl font-bold text-blue-600">
+                      {performanceData.rating}
+                    </Text>
+                    <Text className="text-xs text-gray-600">Rating</Text>
+                  </View>
+                </View>
+              </View>
 
-              {filteredBookings.length > 0 ? (
-                filteredBookings.map((booking) => (
+              {/* RECENT BOOKINGS */}
+              <View className="flex-row items-center justify-between mb-3 mt-4">
+                <Text className="text-lg font-semibold text-gray-800">
+                  Recent Bookings
+                </Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push("../serviceProvider/BookingsScreen")
+                  }
+                >
+                  <Text className="text-blue-600 font-medium">See All</Text>
+                </TouchableOpacity>
+              </View>
+
+              {error && (
+                <View className="bg-red-50 rounded-2xl p-4 mb-4 border border-red-200">
+                  <Text className="text-red-600 text-sm">{error}</Text>
                   <TouchableOpacity
-                    key={booking.id}
-                    className="bg-white rounded-2xl p-4 mb-4 border border-gray-200 shadow-sm"
+                    onPress={fetchBookings}
+                    className="bg-red-600 rounded-xl px-4 py-2 mt-2 self-start"
+                  >
+                    <Text className="text-white font-semibold">Retry</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {bookings.length === 0 && !error ? (
+                <View className="items-center justify-center py-12 bg-gray-50 rounded-2xl">
+                  <Ionicons name="calendar-outline" size={48} color="#d1d5db" />
+                  <Text className="text-gray-500 text-base mt-4">
+                    No bookings yet
+                  </Text>
+                </View>
+              ) : (
+                bookings.map((booking) => (
+                  <TouchableOpacity
+                    key={booking._id}
+                    className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 shadow-sm"
                     onPress={() =>
-                      router.push(`../provider/BookingDetail/${booking.id}`)
+                      router.push({
+                        pathname: "/serviceProvider/BookingDetailsScreen",
+                        params: { bookingId: booking._id },
+                      })
                     }
                   >
                     <View className="flex-row">
-                      <Image
-                        source={{ uri: booking.customerImage }}
-                        className="w-16 h-16 rounded-xl"
-                      />
+                      <View className="w-14 h-14 rounded-xl bg-blue-100 items-center justify-center">
+                        <Text className="text-2xl">👤</Text>
+                      </View>
 
                       <View className="flex-1 ml-4">
                         <View className="flex-row items-center justify-between mb-1">
                           <View className="flex-row items-center">
-                            <Text className="text-lg font-semibold text-gray-800">
-                              {booking.customerName}
+                            <Text className="text-base font-semibold text-gray-800">
+                              {booking.customerDetails.name}
                             </Text>
-                            {booking.urgent && (
+                            {booking.status === "pending" && (
                               <View className="ml-2 bg-red-100 rounded-full px-2 py-0.5">
                                 <Text className="text-xs text-red-600 font-semibold">
-                                  URGENT
+                                  NEW
                                 </Text>
                               </View>
                             )}
@@ -288,29 +298,19 @@ const HomeScreen = () => {
                         </View>
 
                         <Text className="text-sm text-gray-600 mb-2">
-                          {booking.service}
+                          {booking.category}
                         </Text>
-
-                        <View className="flex-row items-center mb-2">
-                          <Ionicons
-                            name="location-outline"
-                            size={14}
-                            color="#6b7280"
-                          />
-                          <Text className="text-xs text-gray-500 ml-1">
-                            {booking.location}
-                          </Text>
-                        </View>
 
                         <View className="flex-row items-center justify-between">
                           <View className="flex-row items-center">
                             <Ionicons
-                              name="calendar-outline"
+                              name="time-outline"
                               size={14}
                               color="#6b7280"
                             />
                             <Text className="text-xs text-gray-500 ml-1">
-                              {booking.date} • {booking.time}
+                              {formatDate(booking.scheduledDate)} •{" "}
+                              {booking.timeSlot}
                             </Text>
                           </View>
                           <View
@@ -319,42 +319,33 @@ const HomeScreen = () => {
                             )}`}
                           >
                             <Text className="text-xs font-semibold">
-                              {booking.status}
+                              {getStatusLabel(booking.status)}
                             </Text>
                           </View>
-                        </View>
-
-                        <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-gray-100">
-                          <Text className="text-sm font-semibold text-green-600">
-                            {booking.price}
-                          </Text>
-                          {booking.status === "Pending" && (
-                            <View className="flex-row gap-2">
-                              <TouchableOpacity className="bg-green-600 rounded-lg px-3 py-1.5">
-                                <Text className="text-white text-xs font-semibold">
-                                  Accept
-                                </Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity className="bg-red-100 rounded-lg px-3 py-1.5">
-                                <Text className="text-red-600 text-xs font-semibold">
-                                  Decline
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
-                          )}
                         </View>
                       </View>
                     </View>
                   </TouchableOpacity>
                 ))
-              ) : (
-                <View className="items-center justify-center py-12">
-                  <Ionicons name="calendar-outline" size={64} color="#d1d5db" />
-                  <Text className="text-gray-500 text-base mt-4">
-                    No {selectedStatus.toLowerCase()} bookings
-                  </Text>
-                </View>
               )}
+
+              {/* Tips Card */}
+              <View className="bg-yellow-50 rounded-2xl p-4 mb-6 border border-yellow-200">
+                <View className="flex-row items-start">
+                  <View className="w-10 h-10 bg-yellow-100 rounded-full items-center justify-center mr-3">
+                    <Ionicons name="bulb" size={24} color="#f59e0b" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-gray-800 mb-1">
+                      Pro Tip
+                    </Text>
+                    <Text className="text-sm text-gray-600">
+                      Respond to booking requests within 1 hour to increase your
+                      acceptance rate and visibility!
+                    </Text>
+                  </View>
+                </View>
+              </View>
 
               <View className="h-4" />
             </ScrollView>

@@ -2,6 +2,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import { connectDatabase } from "./config/database";
+import bookingRoutes from "./routes/bookingRoutes";
 import customerRoutes from "./routes/customerRoutes";
 import providerRoutes from "./routes/providerRoutes";
 import userRoutes from "./routes/userRoutes";
@@ -20,6 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/providers", providerRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
