@@ -60,7 +60,9 @@ const BookingsScreen = () => {
 
   const fetchBookings = async () => {
     try {
-      setLoading(true);
+      if (!refreshing) {
+        setLoading(true);
+      }
       const currentUser = auth.currentUser;
 
       if (!currentUser) {
@@ -77,13 +79,13 @@ const BookingsScreen = () => {
       console.error("Error fetching bookings:", error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchBookings();
-    setRefreshing(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -259,27 +261,10 @@ const BookingsScreen = () => {
     </View>
   );
 
-  if (loading) {
-    return (
-      <View className="flex-1 bg-gray-50 items-center justify-center">
-        <ActivityIndicator size="large" color="#3b82f6" />
-        <Text className="text-gray-500 mt-4">Loading bookings...</Text>
-      </View>
-    );
-  }
-
-  return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-white px-6 pt-12 pb-4 border-b border-gray-200">
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-2xl font-bold text-gray-800">My Bookings</Text>
-          <TouchableOpacity>
-            <Ionicons name="search-outline" size={24} color="#6b7280" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Filter Tabs */}
+  const ListHeaderComponent = () => (
+    <>
+      {/* Filter Tabs */}
+      <View className="bg-white px-6 pb-4 border-b border-gray-200">
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -310,19 +295,60 @@ const BookingsScreen = () => {
         </ScrollView>
       </View>
 
-      {/* Bookings List */}
+      {/* Section Title */}
+      <View className="px-6 pt-4 pb-2">
+        <Text className="text-lg font-semibold text-gray-800">
+          {activeTab === "all"
+            ? "All Bookings"
+            : `${
+                activeTab.charAt(0).toUpperCase() + activeTab.slice(1)
+              } Bookings`}{" "}
+          ({filteredBookings.length})
+        </Text>
+      </View>
+    </>
+  );
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-gray-50 items-center justify-center">
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text className="text-gray-500 mt-4">Loading bookings...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View className="flex-1 bg-gray-50">
+      {/* Header - Fixed at top, doesn't scroll */}
+      <View className="bg-white px-6 pt-12 pb-4">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-2xl font-bold text-gray-800">My Bookings</Text>
+          <TouchableOpacity>
+            <Ionicons name="search-outline" size={24} color="#6b7280" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Bookings List with tabs in header - this scrolls */}
       <FlatList
         data={filteredBookings}
         renderItem={renderBookingCard}
         keyExtractor={(item) => item._id}
+        ListHeaderComponent={ListHeaderComponent}
+        stickyHeaderIndices={[0]}
         contentContainerStyle={
-          filteredBookings.length === 0
-            ? { flex: 1 }
-            : { paddingTop: 16, paddingBottom: 16 }
+          filteredBookings.length === 0 ? { flex: 1 } : { paddingBottom: 16 }
         }
         ListEmptyComponent={renderEmptyState}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#3b82f6"
+            colors={["#3b82f6"]}
+            progressViewOffset={0}
+          />
         }
         showsVerticalScrollIndicator={false}
       />

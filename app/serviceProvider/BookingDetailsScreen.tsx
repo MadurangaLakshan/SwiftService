@@ -91,7 +91,7 @@ const BookingDetailsScreen = () => {
       );
 
       if (response.success) {
-        setBooking(response.data);
+        setBooking(response.data.data);
       } else {
         alert("Failed to update booking status");
       }

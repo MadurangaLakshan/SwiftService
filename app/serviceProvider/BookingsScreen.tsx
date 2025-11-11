@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -34,6 +35,7 @@ const BookingsScreen = () => {
   const { providerData, loading: providerLoading } = useProvider();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = React.useState("all");
 
@@ -54,7 +56,9 @@ const BookingsScreen = () => {
 
   const fetchBookings = async () => {
     try {
-      setLoading(true);
+      if (!refreshing) {
+        setLoading(true);
+      }
       setError(null);
       const response = await getProviderBookings(providerData!.userId);
 
@@ -68,7 +72,13 @@ const BookingsScreen = () => {
       setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchBookings();
   };
 
   const formatDate = (dateString: string) => {
@@ -162,6 +172,14 @@ const BookingsScreen = () => {
       <ScrollView
         className="flex-1 px-6 py-4"
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#3b82f6"
+            colors={["#3b82f6"]}
+          />
+        }
       >
         <Text className="text-lg font-semibold text-gray-800 mb-4 capitalize">
           {formatStatusLabel(selectedStatus)} ({filteredBookings.length})

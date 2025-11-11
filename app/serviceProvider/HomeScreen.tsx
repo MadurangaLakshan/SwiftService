@@ -6,6 +6,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -36,6 +37,7 @@ const HomeScreen = () => {
   const { providerData, loading: providerLoading } = useProvider();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,13 +48,11 @@ const HomeScreen = () => {
 
   const fetchBookings = async () => {
     try {
-      setLoading(true);
+      if (!refreshing) setLoading(true);
       setError(null);
       const response = await getProviderBookings(providerData!.userId);
 
       if (response.success) {
-        // Get only the 3 most recent bookings for home screen
-        console.log(response.data);
         const recentBookings = response.data.data.slice(0, 3);
         setBookings(recentBookings);
       } else {
@@ -63,30 +63,27 @@ const HomeScreen = () => {
       setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  // Calculate pending requests
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchBookings();
+  };
+
   const pendingRequests = bookings.filter((b) => b.status === "pending");
   const pendingCount = pendingRequests.length;
 
-  // Format date for display
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    if (date.toDateString() === today.toDateString()) {
-      return "Today";
-    } else if (date.toDateString() === tomorrow.toDateString()) {
-      return "Tomorrow";
-    } else {
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-    }
+    if (date.toDateString() === today.toDateString()) return "Today";
+    if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
   const getStatusColor = (status: string) => {
@@ -110,7 +107,6 @@ const HomeScreen = () => {
       : status.charAt(0).toUpperCase() + status.slice(1);
   };
 
-  // Mock performance data (you can create another API endpoint for this)
   const performanceData = {
     jobs: bookings.filter((b) => b.status === "completed").length,
     earned: bookings
@@ -199,12 +195,21 @@ const HomeScreen = () => {
               </View>
             </View>
 
+            {/* MAIN SCROLL */}
             <ScrollView
               className="flex-1"
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 24 }}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor="#3b82f6"
+                  colors={["#3b82f6"]}
+                />
+              }
             >
-              {/* Performance Summary Card */}
+              {/* Performance Summary */}
               <View className="bg-gray-50 rounded-2xl p-4 my-4 border border-gray-200">
                 <Text className="text-sm font-semibold text-gray-500 uppercase mb-3">
                   Overall Performance
@@ -231,7 +236,7 @@ const HomeScreen = () => {
                 </View>
               </View>
 
-              {/* RECENT BOOKINGS */}
+              {/* Recent Bookings */}
               <View className="flex-row items-center justify-between mb-3 mt-4">
                 <Text className="text-lg font-semibold text-gray-800">
                   Recent Bookings
@@ -329,7 +334,7 @@ const HomeScreen = () => {
                 ))
               )}
 
-              {/* Tips Card */}
+              {/* Tips */}
               <View className="bg-yellow-50 rounded-2xl p-4 mb-6 border border-yellow-200">
                 <View className="flex-row items-start">
                   <View className="w-10 h-10 bg-yellow-100 rounded-full items-center justify-center mr-3">

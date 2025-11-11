@@ -7,6 +7,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
   ScrollView,
   Text,
   TextInput,
@@ -49,6 +50,7 @@ const HomeScreen = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loadingProviders, setLoadingProviders] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { customerData, loading } = useCustomer();
 
   const categories = [
@@ -84,7 +86,13 @@ const HomeScreen = () => {
       setProviders([]);
     } finally {
       setLoadingProviders(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchProviders();
   };
 
   // Filter providers based on selected category and search query
@@ -133,16 +141,7 @@ const HomeScreen = () => {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View className="flex-1">
             <View className="px-6">
-              <View className="flex-row items-center gap-2 mt-12 mb-6 justify-center">
-                <Image
-                  source={require("../../assets/images/SwiftService.png")}
-                  className="w-16 h-16"
-                />
-                <Text className="text-2xl font-bold">
-                  <Text className="text-blue-700">Swift</Text>
-                  <Text className="text-gray-700">Service</Text>
-                </Text>
-              </View>
+              <View className="mt-12 mb-6" />
 
               <View className="flex-row items-center justify-between w-full mb-4">
                 <View>
@@ -217,6 +216,14 @@ const HomeScreen = () => {
             <ScrollView
               className="flex-1 px-6"
               showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor="#3b82f6"
+                  colors={["#3b82f6"]}
+                />
+              }
             >
               <Text className="text-lg font-semibold text-gray-800 mb-4">
                 {selectedCategory === "All"
