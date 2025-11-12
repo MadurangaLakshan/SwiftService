@@ -13,10 +13,12 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@react-native-firebase/app": "^23.5.0",
+    "@react-native-firebase/firestore": "^23.5.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
-    "firebase-admin": "^13.5.0",
+    "firebase-admin": "^13.6.0",
     "mongoose": "^8.19.1"
   },
   "devDependencies": {

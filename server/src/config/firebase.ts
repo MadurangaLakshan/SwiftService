@@ -11,6 +11,8 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
+export const db = admin.firestore();
+
 export const verifyFirebaseToken = async (token: string) => {
   try {
     const decodedToken = await admin.auth().verifyIdToken(token);

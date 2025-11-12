@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { createBooking } from "../services/apiService";
+import { createConversation } from "../services/messageService";
 
 const ProviderDetailsScreen = () => {
   const params = useLocalSearchParams();
@@ -118,6 +119,25 @@ const ProviderDetailsScreen = () => {
       Linking.openURL(`tel:${phone}`);
     } else {
       alert("Phone number not available");
+    }
+  };
+
+  const handleMessage = async () => {
+    try {
+      const response = await createConversation(params.userId as string);
+      if (response.success) {
+        router.push({
+          pathname: "/customer/ChatScreen",
+          params: {
+            conversationId: response.data.conversationId,
+            otherUserId: params.userId,
+            name: params.name,
+            image: params.image,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Error creating conversation:", error);
     }
   };
 
@@ -311,6 +331,14 @@ const ProviderDetailsScreen = () => {
         >
           <Ionicons name="calendar-outline" size={24} color="white" />
           <Text className="text-white font-bold text-base ml-2">Book Now</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleMessage}
+          className="flex-1 bg-white border-2 border-blue-600 rounded-xl py-4 mr-2"
+        >
+          <Text className="text-blue-600 text-center font-semibold text-base">
+            Message
+          </Text>
         </TouchableOpacity>
       </View>
 
