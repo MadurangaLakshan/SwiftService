@@ -4,6 +4,7 @@ import express from "express";
 import { connectDatabase } from "./config/database";
 import bookingRoutes from "./routes/bookingRoutes";
 import customerRoutes from "./routes/customerRoutes";
+import messageRoutes from "./routes/messageRoute";
 import providerRoutes from "./routes/providerRoutes";
 import userRoutes from "./routes/userRoutes";
 
@@ -22,6 +23,7 @@ app.use("/api/providers", providerRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/messages", messageRoutes);
 
 // Health check
 app.get("/health", (req, res) => {

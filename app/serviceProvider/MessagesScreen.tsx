@@ -1,88 +1,144 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
 import {
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
   Image,
+  RefreshControl,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { auth, db } from "../config/firebase";
+import { getConversations } from "../services/messageService";
+
+interface Conversation {
+  id: string;
+  participantIds: string[];
+  participants: {
+    [key: string]: {
+      name: string;
+      photo: string | null;
+      userType: "provider" | "customer";
+    };
+  };
+  lastMessage: string | null;
+  lastMessageTime: any;
+  unreadCount: {
+    [key: string]: number;
+  };
+}
 
 const MessagesScreen = () => {
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const currentUserId = auth.currentUser?.uid;
 
-  const conversations = [
-    {
-      id: 1,
-      name: "John Silva",
-      service: "Electrical Services",
-      lastMessage: "I'll be there at 2 PM tomorrow",
-      timestamp: "2m ago",
-      unread: 2,
-      image: "https://i.pravatar.cc/150?img=12",
-      online: true,
-    },
-    {
-      id: 2,
-      name: "Sarah Perera",
-      service: "Plumbing Services",
-      lastMessage: "The job is complete. Please review",
-      timestamp: "1h ago",
-      unread: 0,
-      image: "https://i.pravatar.cc/150?img=45",
-      online: true,
-    },
-    {
-      id: 3,
-      name: "Mike Fernando",
-      service: "Construction Work",
-      lastMessage: "Can we reschedule to next week?",
-      timestamp: "3h ago",
-      unread: 1,
-      image: "https://i.pravatar.cc/150?img=33",
-      online: false,
-    },
-    {
-      id: 4,
-      name: "David Kumar",
-      service: "Carpentry Services",
-      lastMessage: "Thank you for the positive review!",
-      timestamp: "1d ago",
-      unread: 0,
-      image: "https://i.pravatar.cc/150?img=51",
-      online: false,
-    },
-    {
-      id: 5,
-      name: "Lisa Jayawardena",
-      service: "Painting Services",
-      lastMessage: "I have the color samples ready",
-      timestamp: "2d ago",
-      unread: 0,
-      image: "https://i.pravatar.cc/150?img=47",
-      online: false,
-    },
-    {
-      id: 6,
-      name: "Ahmed Hassan",
-      service: "HVAC Services",
-      lastMessage: "Your AC installation is scheduled",
-      timestamp: "3d ago",
-      unread: 0,
-      image: "https://i.pravatar.cc/150?img=52",
-      online: true,
-    },
-  ];
+  useEffect(() => {
+    fetchConversations();
 
-  const filteredConversations = conversations.filter(
-    (conv) =>
-      conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      conv.service.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    // Real-time listener for conversations
+    if (!currentUserId) return;
 
-  const unreadCount = conversations.filter((conv) => conv.unread > 0).length;
+    const conversationsRef = collection(db, "conversations");
+    const q = query(
+      conversationsRef,
+      where("participantIds", "array-contains", currentUserId),
+      orderBy("lastMessageTime", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const convs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Conversation[];
+      setConversations(convs);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentUserId]);
+
+  const fetchConversations = async () => {
+    try {
+      const response = await getConversations();
+      if (response.success && response.data) {
+        setConversations(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchConversations();
+  };
+
+  const getOtherParticipant = (conversation: Conversation) => {
+    const otherUserId = conversation.participantIds.find(
+      (id) => id !== currentUserId
+    );
+    return otherUserId ? conversation.participants[otherUserId] : null;
+  };
+
+  const getTimestamp = (timestamp: any) => {
+    if (!timestamp) return "";
+
+    let date: Date;
+    if (timestamp.toDate) {
+      date = timestamp.toDate();
+    } else if (timestamp.seconds) {
+      date = new Date(timestamp.seconds * 1000);
+    } else {
+      date = new Date(timestamp);
+    }
+
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const filteredConversations = conversations.filter((conv) => {
+    const other = getOtherParticipant(conv);
+    if (!other) return false;
+    return other.name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  const unreadCount = conversations.filter(
+    (conv) => currentUserId && conv.unreadCount[currentUserId] > 0
+  ).length;
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#3b82f6" />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-white">
@@ -118,74 +174,100 @@ const MessagesScreen = () => {
       </View>
 
       {/* Conversations List */}
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {filteredConversations.length > 0 ? (
-          filteredConversations.map((conversation) => (
-            <TouchableOpacity
-              key={conversation.id}
-              onPress={() =>
-                router.push({
-                  pathname: "/customer/ChatScreen",
-                  params: {
-                    id: conversation.id,
-                    name: conversation.name,
-                    service: conversation.service,
-                    image: conversation.image,
-                  },
-                })
-              }
-              className="px-6 py-4 border-b border-gray-100 bg-white active:bg-gray-50"
-            >
-              <View className="flex-row items-center">
-                {/* Profile Image with Online Status */}
-                <View className="relative">
-                  <Image
-                    source={{ uri: conversation.image }}
-                    className="w-14 h-14 rounded-full"
-                  />
-                  {conversation.online && (
-                    <View className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
-                  )}
-                </View>
+          filteredConversations.map((conversation) => {
+            const otherUser = getOtherParticipant(conversation);
+            if (!otherUser) return null;
 
-                {/* Message Content */}
-                <View className="flex-1 ml-4">
-                  <View className="flex-row items-center justify-between mb-1">
-                    <Text className="text-base font-semibold text-gray-800">
-                      {conversation.name}
-                    </Text>
-                    <Text className="text-xs text-gray-400">
-                      {conversation.timestamp}
-                    </Text>
+            const unread = currentUserId
+              ? conversation.unreadCount[currentUserId]
+              : 0;
+
+            return (
+              <TouchableOpacity
+                key={conversation.id}
+                onPress={() =>
+                  router.push({
+                    pathname: "/serviceProvider/ChatScreen",
+                    params: {
+                      conversationId: conversation.id,
+                      otherUserId: conversation.participantIds.find(
+                        (id) => id !== currentUserId
+                      ),
+                      name: otherUser.name,
+                      image:
+                        otherUser.photo ||
+                        `https://i.pravatar.cc/150?u=${conversation.participantIds.find(
+                          (id) => id !== currentUserId
+                        )}`,
+                    },
+                  })
+                }
+                className="px-6 py-4 border-b border-gray-100 bg-white active:bg-gray-50"
+              >
+                <View className="flex-row items-center">
+                  {/* Profile Image */}
+                  <View className="relative">
+                    <Image
+                      source={{
+                        uri:
+                          otherUser.photo ||
+                          `https://i.pravatar.cc/150?u=${conversation.participantIds.find(
+                            (id) => id !== currentUserId
+                          )}`,
+                      }}
+                      className="w-14 h-14 rounded-full"
+                    />
                   </View>
 
-                  <Text className="text-xs text-gray-500 mb-1">
-                    {conversation.service}
-                  </Text>
+                  {/* Message Content */}
+                  <View className="flex-1 ml-4">
+                    <View className="flex-row items-center justify-between mb-1">
+                      <Text className="text-base font-semibold text-gray-800">
+                        {otherUser.name}
+                      </Text>
+                      <Text className="text-xs text-gray-400">
+                        {getTimestamp(conversation.lastMessageTime)}
+                      </Text>
+                    </View>
 
-                  <View className="flex-row items-center justify-between">
-                    <Text
-                      className={`text-sm flex-1 ${
-                        conversation.unread > 0
-                          ? "text-gray-800 font-medium"
-                          : "text-gray-500"
-                      }`}
-                      numberOfLines={1}
-                    >
-                      {conversation.lastMessage}
+                    <Text className="text-xs text-gray-500 mb-1">
+                      {otherUser.userType === "customer"
+                        ? "Customer"
+                        : "Provider"}
                     </Text>
-                    {conversation.unread > 0 && (
-                      <View className="bg-blue-600 rounded-full w-6 h-6 items-center justify-center ml-2">
-                        <Text className="text-white text-xs font-bold">
-                          {conversation.unread}
-                        </Text>
-                      </View>
-                    )}
+
+                    <View className="flex-row items-center justify-between">
+                      <Text
+                        className={`text-sm flex-1 ${
+                          unread > 0
+                            ? "text-gray-800 font-medium"
+                            : "text-gray-500"
+                        }`}
+                        numberOfLines={1}
+                      >
+                        {conversation.lastMessage || "No messages yet"}
+                      </Text>
+                      {unread > 0 && (
+                        <View className="bg-blue-600 rounded-full w-6 h-6 items-center justify-center ml-2">
+                          <Text className="text-white text-xs font-bold">
+                            {unread}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))
+              </TouchableOpacity>
+            );
+          })
         ) : (
           <View className="items-center justify-center py-20">
             <Ionicons

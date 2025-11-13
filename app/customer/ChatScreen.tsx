@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React from "react";
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -11,101 +13,163 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { auth, db } from "../config/firebase";
+import {
+  markAsRead,
+  sendMessage as sendMessageAPI,
+} from "../services/messageService";
+
+interface Message {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderPhoto: string | null;
+  text: string;
+  timestamp: any;
+  read: boolean;
+}
 
 const ChatScreen = () => {
   const params = useLocalSearchParams();
-  const { name, service, image } = params;
+  const { conversationId, otherUserId, name, image } = params;
 
-  const [message, setMessage] = React.useState("");
-  const scrollViewRef = React.useRef<ScrollView>(null);
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const currentUserId = auth.currentUser?.uid;
 
-  const [messages, setMessages] = React.useState([
-    {
-      id: 1,
-      text: "Hi! I saw your service request",
-      sender: "provider",
-      timestamp: "10:30 AM",
-    },
-    {
-      id: 2,
-      text: "Yes, I need help with electrical wiring",
-      sender: "customer",
-      timestamp: "10:32 AM",
-    },
-    {
-      id: 3,
-      text: "I can help with that. When would be a good time?",
-      sender: "provider",
-      timestamp: "10:33 AM",
-    },
-    {
-      id: 4,
-      text: "Tomorrow afternoon would be perfect",
-      sender: "customer",
-      timestamp: "10:35 AM",
-    },
-    {
-      id: 5,
-      text: "Great! I'll be there at 2 PM tomorrow",
-      sender: "provider",
-      timestamp: "10:36 AM",
-    },
-    {
-      id: 6,
-      text: "Perfect, see you then!",
-      sender: "customer",
-      timestamp: "10:37 AM",
-    },
-  ]);
+  // Real-time listener for messages
+  useEffect(() => {
+    if (!conversationId) {
+      console.error("No conversation ID provided");
+      setLoading(false);
+      return;
+    }
 
-  const sendMessage = () => {
-    if (message.trim().length > 0) {
-      const newMessage = {
-        id: messages.length + 1,
-        text: message.trim(),
-        sender: "customer",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      setMessages([...messages, newMessage]);
-      setMessage("");
+    const messagesRef = collection(
+      db,
+      "conversations",
+      conversationId as string,
+      "messages"
+    );
+    const q = query(messagesRef, orderBy("timestamp", "asc"));
 
-      // Scroll to bottom
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Message[];
+      setMessages(msgs);
+      setLoading(false);
+
+      // Scroll to bottom when new messages arrive
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
+    });
+
+    // Mark conversation as read when opening
+    if (currentUserId) {
+      markAsRead(conversationId as string);
+    }
+
+    return () => unsubscribe();
+  }, [conversationId, currentUserId]);
+
+  const handleSendMessage = async () => {
+    if (message.trim().length === 0 || !conversationId || sending) return;
+
+    const messageText = message.trim();
+    setMessage("");
+    setSending(true);
+
+    try {
+      // Send message via API (which handles Firestore and updates conversation)
+      const response = await sendMessageAPI(
+        conversationId as string,
+        messageText
+      );
+
+      if (!response.success) {
+        console.error("Failed to send message:", response.error);
+        // Restore message text on error
+        setMessage(messageText);
+        alert("Failed to send message. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setMessage(messageText);
+      alert("Failed to send message. Please try again.");
+    } finally {
+      setSending(false);
     }
   };
 
+  const formatTimestamp = (timestamp: any) => {
+    if (!timestamp) return "";
+
+    let date: Date;
+    if (timestamp.toDate) {
+      date = timestamp.toDate();
+    } else if (timestamp.seconds) {
+      date = new Date(timestamp.seconds * 1000);
+    } else {
+      date = new Date(timestamp);
+    }
+
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatDateHeader = () => {
+    const today = new Date();
+    return today.toLocaleDateString([], {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-gray-50 items-center justify-center">
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text className="text-gray-500 mt-4">Loading conversation...</Text>
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-gray-50">
+      {/* Header */}
       <View className="bg-white px-6 pt-12 pb-4 border-b border-gray-200">
         <View className="flex-row items-center">
-          <TouchableOpacity
-            onPress={() => router.push("/customer/MessagesScreen")}
-            className="mr-4"
-          >
+          <TouchableOpacity onPress={() => router.back()} className="mr-4">
             <Ionicons name="arrow-back" size={24} color="black" />
           </TouchableOpacity>
 
           <View className="relative mr-3">
             <Image
-              source={{ uri: image as string }}
+              source={{
+                uri:
+                  (image as string) ||
+                  `https://i.pravatar.cc/150?u=${otherUserId}`,
+              }}
               className="w-10 h-10 rounded-full"
             />
-            <View className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
           </View>
 
           <View className="flex-1">
             <Text className="text-lg font-semibold text-gray-800">{name}</Text>
-            <Text className="text-xs text-gray-500">{service}</Text>
+            <Text className="text-xs text-gray-500">
+              {messages.length === 0 ? "Start a conversation" : "Active"}
+            </Text>
           </View>
 
-          <TouchableOpacity className="ml-2">
-            <Ionicons name="call-outline" size={24} color="#3b82f6" />
-          </TouchableOpacity>
           <TouchableOpacity className="ml-4">
             <Ionicons name="ellipsis-vertical" size={24} color="#6b7280" />
           </TouchableOpacity>
@@ -122,50 +186,69 @@ const ChatScreen = () => {
           className="flex-1 px-4 py-4"
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() =>
-            scrollViewRef.current?.scrollToEnd({ animated: true })
+            scrollViewRef.current?.scrollToEnd({ animated: false })
           }
         >
+          {/* Date Header */}
           <View className="items-center my-4">
             <View className="bg-gray-200 px-4 py-1 rounded-full">
-              <Text className="text-xs text-gray-600">Today</Text>
+              <Text className="text-xs text-gray-600">
+                {formatDateHeader()}
+              </Text>
             </View>
           </View>
 
-          {messages.map((msg) => (
-            <View
-              key={msg.id}
-              className={`mb-3 ${
-                msg.sender === "customer" ? "items-end" : "items-start"
-              }`}
-            >
-              <View
-                className={`max-w-[75%] px-4 py-3 rounded-2xl ${
-                  msg.sender === "customer"
-                    ? "bg-blue-600 rounded-br-sm"
-                    : "bg-white rounded-bl-sm border border-gray-200"
-                }`}
-              >
-                <Text
-                  className={`text-base ${
-                    msg.sender === "customer" ? "text-white" : "text-gray-800"
-                  }`}
-                >
-                  {msg.text}
-                </Text>
-              </View>
-              <Text className="text-xs text-gray-400 mt-1 px-2">
-                {msg.timestamp}
+          {/* Messages */}
+          {messages.length === 0 ? (
+            <View className="items-center justify-center py-12">
+              <Ionicons
+                name="chatbox-ellipses-outline"
+                size={64}
+                color="#d1d5db"
+              />
+              <Text className="text-gray-500 text-base mt-4">
+                No messages yet
+              </Text>
+              <Text className="text-gray-400 text-sm mt-2">
+                Start the conversation!
               </Text>
             </View>
-          ))}
+          ) : (
+            messages.map((msg) => (
+              <View
+                key={msg.id}
+                className={`mb-3 ${
+                  msg.senderId === currentUserId ? "items-end" : "items-start"
+                }`}
+              >
+                <View
+                  className={`max-w-[75%] px-4 py-3 rounded-2xl ${
+                    msg.senderId === currentUserId
+                      ? "bg-blue-600 rounded-br-sm"
+                      : "bg-white rounded-bl-sm border border-gray-200"
+                  }`}
+                >
+                  <Text
+                    className={`text-base ${
+                      msg.senderId === currentUserId
+                        ? "text-white"
+                        : "text-gray-800"
+                    }`}
+                  >
+                    {msg.text}
+                  </Text>
+                </View>
+                <Text className="text-xs text-gray-400 mt-1 px-2">
+                  {formatTimestamp(msg.timestamp)}
+                </Text>
+              </View>
+            ))
+          )}
         </ScrollView>
 
+        {/* Input Area */}
         <View className="bg-white px-4 py-3 border-t border-gray-200">
           <View className="flex-row items-center">
-            <TouchableOpacity className="mr-3">
-              <Ionicons name="add-circle-outline" size={28} color="#3b82f6" />
-            </TouchableOpacity>
-
             <View className="flex-1 flex-row items-center bg-gray-100 rounded-full px-4 py-2">
               <TextInput
                 placeholder="Type a message..."
@@ -175,20 +258,24 @@ const ChatScreen = () => {
                 className="flex-1 text-gray-800 text-base"
                 multiline
                 maxLength={500}
+                onSubmitEditing={handleSendMessage}
               />
-              <TouchableOpacity className="ml-2">
-                <Ionicons name="happy-outline" size={24} color="#6b7280" />
-              </TouchableOpacity>
             </View>
 
             <TouchableOpacity
-              onPress={sendMessage}
+              onPress={handleSendMessage}
               className={`ml-3 w-10 h-10 rounded-full items-center justify-center ${
-                message.trim().length > 0 ? "bg-blue-600" : "bg-gray-300"
+                message.trim().length > 0 && !sending
+                  ? "bg-blue-600"
+                  : "bg-gray-300"
               }`}
-              disabled={message.trim().length === 0}
+              disabled={message.trim().length === 0 || sending}
             >
-              <Ionicons name="send" size={20} color="white" />
+              {sending ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Ionicons name="send" size={20} color="white" />
+              )}
             </TouchableOpacity>
           </View>
         </View>

@@ -124,20 +124,23 @@ const ProviderDetailsScreen = () => {
 
   const handleMessage = async () => {
     try {
-      const response = await createConversation(params.userId as string);
+      const response = await createConversation(userId as string);
       if (response.success) {
         router.push({
           pathname: "/customer/ChatScreen",
           params: {
             conversationId: response.data.conversationId,
-            otherUserId: params.userId,
-            name: params.name,
-            image: params.image,
+            otherUserId: userId,
+            name: name,
+            image: image,
           },
         });
+      } else {
+        alert(`Failed to create conversation: ${response.error}`);
       }
     } catch (error) {
       console.error("Error creating conversation:", error);
+      alert("Failed to start conversation. Please try again.");
     }
   };
 
@@ -209,19 +212,10 @@ const ProviderDetailsScreen = () => {
             ))}
           </View>
 
+          {/* Message and Call Buttons */}
           <View className="flex-row gap-3">
             <TouchableOpacity
-              onPress={() =>
-                router.push({
-                  pathname: "/customer/ChatScreen",
-                  params: {
-                    id: id,
-                    name: name,
-                    service: service,
-                    image: image,
-                  },
-                })
-              }
+              onPress={handleMessage}
               className="flex-1 bg-gray-100 py-3 rounded-xl flex-row items-center justify-center"
             >
               <Ionicons name="chatbox-outline" size={20} color="#3b82f6" />
@@ -323,7 +317,7 @@ const ProviderDetailsScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Book Now Button */}
+      {/* Book Now Button - REMOVED THE DUPLICATE MESSAGE BUTTON */}
       <View className="bg-white px-6 py-4 border-t border-gray-200">
         <TouchableOpacity
           onPress={() => setShowBookingModal(true)}
@@ -331,14 +325,6 @@ const ProviderDetailsScreen = () => {
         >
           <Ionicons name="calendar-outline" size={24} color="white" />
           <Text className="text-white font-bold text-base ml-2">Book Now</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleMessage}
-          className="flex-1 bg-white border-2 border-blue-600 rounded-xl py-4 mr-2"
-        >
-          <Text className="text-blue-600 text-center font-semibold text-base">
-            Message
-          </Text>
         </TouchableOpacity>
       </View>
 

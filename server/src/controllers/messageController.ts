@@ -1,5 +1,6 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import admin, { db } from "../config/firebase";
+import { AuthRequest } from "../middleware/authMiddleware";
 import Customer from "../models/Customer";
 import Provider from "../models/Provider";
 import User from "../models/User";
@@ -37,7 +38,7 @@ const getUserDetails = async (userId: string) => {
   }
 };
 
-export const createConversation = async (req: Request, res: Response) => {
+export const createConversation = async (req: AuthRequest, res: Response) => {
   try {
     const { otherUserId } = req.body;
     const currentUserId = req.user!.uid; // Firebase UID from your auth middleware
@@ -109,7 +110,7 @@ export const createConversation = async (req: Request, res: Response) => {
   }
 };
 
-export const getConversations = async (req: Request, res: Response) => {
+export const getConversations = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.uid;
 
@@ -131,7 +132,7 @@ export const getConversations = async (req: Request, res: Response) => {
   }
 };
 
-export const sendMessage = async (req: Request, res: Response) => {
+export const sendMessage = async (req: AuthRequest, res: Response) => {
   try {
     const { conversationId, text } = req.body;
     const currentUserId = req.user!.uid;
@@ -191,7 +192,7 @@ export const sendMessage = async (req: Request, res: Response) => {
   }
 };
 
-export const getMessages = async (req: Request, res: Response) => {
+export const getMessages = async (req: AuthRequest, res: Response) => {
   try {
     const { conversationId } = req.params;
     const { limit = 50 } = req.query;
@@ -227,7 +228,7 @@ export const getMessages = async (req: Request, res: Response) => {
   }
 };
 
-export const markAsRead = async (req: Request, res: Response) => {
+export const markAsRead = async (req: AuthRequest, res: Response) => {
   try {
     const { conversationId } = req.params;
     const userId = req.user!.uid;
@@ -246,7 +247,7 @@ export const markAsRead = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteConversation = async (req: Request, res: Response) => {
+export const deleteConversation = async (req: AuthRequest, res: Response) => {
   try {
     const { conversationId } = req.params;
     const userId = req.user!.uid;
