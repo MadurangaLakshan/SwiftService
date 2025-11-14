@@ -14,6 +14,15 @@ import {
 import { auth } from "../config/firebase";
 import { getCustomerBookings } from "../services/apiService";
 
+type BookingStatus =
+  | "pending"
+  | "confirmed"
+  | "in-progress"
+  | "completed"
+  | "cancelled";
+
+type TabStatus = "all" | "pending" | "confirmed" | "completed";
+
 interface Booking {
   _id: string;
   customerId: string;
@@ -24,7 +33,7 @@ interface Booking {
   timeSlot: string;
   serviceAddress: string;
   additionalNotes?: string;
-  status: "pending" | "confirmed" | "in-progress" | "completed" | "cancelled";
+  status: BookingStatus;
   pricing: {
     hourlyRate: number;
     estimatedHours: number;
@@ -50,9 +59,8 @@ const BookingsScreen = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "all" | "pending" | "confirmed" | "completed"
-  >("all");
+
+  const [activeTab, setActiveTab] = useState<TabStatus>("all");
 
   useEffect(() => {
     fetchBookings();
@@ -97,7 +105,7 @@ const BookingsScreen = () => {
     });
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: BookingStatus) => {
     switch (status) {
       case "confirmed":
         return "bg-green-100 text-green-700 border-green-200";
@@ -114,7 +122,7 @@ const BookingsScreen = () => {
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: BookingStatus) => {
     switch (status) {
       case "confirmed":
         return "checkmark-circle";
@@ -261,10 +269,29 @@ const BookingsScreen = () => {
     </View>
   );
 
-  const ListHeaderComponent = () => (
-    <>
-      {/* Filter Tabs */}
-      <View className="bg-white px-6 pb-4 border-b border-gray-200">
+  if (loading) {
+    return (
+      <View className="flex-1 bg-gray-50 items-center justify-center">
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text className="text-gray-500 mt-4">Loading bookings...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View className="flex-1 bg-gray-50">
+      {/* Header - Fixed at top */}
+      <View className="bg-white px-6 pt-12 pb-4 border-b border-gray-200">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-2xl font-bold text-gray-800">My Bookings</Text>
+          <TouchableOpacity>
+            <Ionicons name="search-outline" size={24} color="#6b7280" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Filter Tabs - Fixed below header */}
+      <View className="bg-white px-6 py-4 border-b border-gray-200">
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -278,7 +305,7 @@ const BookingsScreen = () => {
           ].map((tab) => (
             <TouchableOpacity
               key={tab.key}
-              onPress={() => setActiveTab(tab.key as any)}
+              onPress={() => setActiveTab(tab.key as TabStatus)}
               className={`mr-3 px-4 py-2 rounded-xl ${
                 activeTab === tab.key ? "bg-blue-600" : "bg-gray-100"
               }`}
@@ -295,9 +322,9 @@ const BookingsScreen = () => {
         </ScrollView>
       </View>
 
-      {/* Section Title */}
-      <View className="px-6 pt-4 pb-2">
-        <Text className="text-lg font-semibold text-gray-800">
+      {/* Section Title - Fixed above list */}
+      <View className="bg-gray-50 px-6 py-3 border-b border-gray-200">
+        <Text className="text-base font-semibold text-gray-800">
           {activeTab === "all"
             ? "All Bookings"
             : `${
@@ -306,39 +333,16 @@ const BookingsScreen = () => {
           ({filteredBookings.length})
         </Text>
       </View>
-    </>
-  );
 
-  if (loading) {
-    return (
-      <View className="flex-1 bg-gray-50 items-center justify-center">
-        <ActivityIndicator size="large" color="#3b82f6" />
-        <Text className="text-gray-500 mt-4">Loading bookings...</Text>
-      </View>
-    );
-  }
-
-  return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header - Fixed at top, doesn't scroll */}
-      <View className="bg-white px-6 pt-12 pb-4">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-gray-800">My Bookings</Text>
-          <TouchableOpacity>
-            <Ionicons name="search-outline" size={24} color="#6b7280" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Bookings List with tabs in header - this scrolls */}
+      {/* Bookings List - Only this scrolls */}
       <FlatList
         data={filteredBookings}
         renderItem={renderBookingCard}
         keyExtractor={(item) => item._id}
-        ListHeaderComponent={ListHeaderComponent}
-        stickyHeaderIndices={[0]}
         contentContainerStyle={
-          filteredBookings.length === 0 ? { flex: 1 } : { paddingBottom: 16 }
+          filteredBookings.length === 0
+            ? { flex: 1 }
+            : { paddingTop: 16, paddingBottom: 16 }
         }
         ListEmptyComponent={renderEmptyState}
         refreshControl={
@@ -347,7 +351,6 @@ const BookingsScreen = () => {
             onRefresh={onRefresh}
             tintColor="#3b82f6"
             colors={["#3b82f6"]}
-            progressViewOffset={0}
           />
         }
         showsVerticalScrollIndicator={false}

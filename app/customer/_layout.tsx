@@ -1,8 +1,63 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import React from "react";
-import { Text } from "react-native";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import { Text, View } from "react-native";
+import { auth, db } from "../config/firebase";
 import { CustomerProvider } from "../context/CustomerContext";
+
+const MessagesIconWithBadge = ({ color }: { color: string }) => {
+  const [unreadCount, setUnreadCount] = useState(0);
+  const currentUserId = auth.currentUser?.uid;
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const conversationsRef = collection(db, "conversations");
+    const q = query(
+      conversationsRef,
+      where("participantIds", "array-contains", currentUserId)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const conversations = snapshot.docs.map((doc) => doc.data());
+      const totalUnread = conversations.filter(
+        (conv: any) => conv.unreadCount && conv.unreadCount[currentUserId] > 0
+      ).length;
+      setUnreadCount(totalUnread);
+    });
+
+    return () => unsubscribe();
+  }, [currentUserId]);
+
+  return (
+    <View style={{ width: 26, height: 26, position: "relative" }}>
+      <Ionicons name="chatbox-ellipses-outline" size={26} color={color} />
+      {unreadCount > 0 && (
+        <View
+          style={{
+            position: "absolute",
+            top: -4,
+            right: -8,
+            backgroundColor: "#ef4444",
+            borderRadius: 10,
+            minWidth: 18,
+            height: 18,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 4,
+            borderWidth: 2,
+            borderColor: "white",
+          }}
+        >
+          <Text style={{ color: "white", fontSize: 10, fontWeight: "bold" }}>
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
 
 export default function CustomerLayout() {
   return (
@@ -53,11 +108,7 @@ export default function CustomerLayout() {
           options={{
             title: "Messages",
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                name="chatbox-ellipses-outline"
-                size={26}
-                color={color}
-              />
+              <MessagesIconWithBadge color={color} />
             ),
             tabBarLabel: ({ color }) => (
               <Text style={{ color, fontSize: 12, marginTop: 4 }}>

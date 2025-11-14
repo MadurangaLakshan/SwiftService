@@ -1,8 +1,182 @@
+// import { Ionicons } from "@expo/vector-icons";
+// import { Tabs } from "expo-router";
+// import React from "react";
+// import { Text } from "react-native";
+// import { ProviderProvider } from "../context/ProviderContext";
+
+// export default function ProviderLayout() {
+//   return (
+//     <ProviderProvider>
+//       <Tabs
+//         screenOptions={{
+//           headerShown: false,
+//           tabBarStyle: {
+//             backgroundColor: "white",
+//             borderTopWidth: 1,
+//             borderTopColor: "#e5e7eb",
+//             paddingBottom: 24,
+//             paddingTop: 12,
+//             height: 88,
+//           },
+//           tabBarActiveTintColor: "#3b82f6",
+//           tabBarInactiveTintColor: "#9ca3af",
+//         }}
+//       >
+//         <Tabs.Screen
+//           name="HomeScreen"
+//           options={{
+//             title: "Home",
+//             tabBarIcon: ({ color, focused }) => (
+//               <Ionicons name="home" size={26} color={color} />
+//             ),
+//             tabBarLabel: ({ color }) => (
+//               <Text style={{ color, fontSize: 12, marginTop: 4 }}>Home</Text>
+//             ),
+//           }}
+//         />
+
+//         <Tabs.Screen
+//           name="BookingsScreen"
+//           options={{
+//             title: "Bookings",
+//             tabBarIcon: ({ color, focused }) => (
+//               <Ionicons name="calendar-outline" size={26} color={color} />
+//             ),
+//             tabBarLabel: ({ color }) => (
+//               <Text style={{ color, fontSize: 12, marginTop: 4 }}>
+//                 Bookings
+//               </Text>
+//             ),
+//           }}
+//         />
+//         <Tabs.Screen
+//           name="Dashboard"
+//           options={{
+//             title: "Dashboard",
+//             tabBarIcon: ({ color, focused }) => (
+//               <Ionicons name="bar-chart-outline" size={26} color={color} />
+//             ),
+//             tabBarLabel: ({ color }) => (
+//               <Text style={{ color, fontSize: 12, marginTop: 4 }}>
+//                 Dashboard
+//               </Text>
+//             ),
+//           }}
+//         />
+//         <Tabs.Screen
+//           name="MessagesScreen"
+//           options={{
+//             title: "Messages",
+//             tabBarIcon: ({ color, focused }) => (
+//               <Ionicons
+//                 name="chatbox-ellipses-outline"
+//                 size={26}
+//                 color={color}
+//               />
+//             ),
+//             tabBarLabel: ({ color }) => (
+//               <Text style={{ color, fontSize: 12, marginTop: 4 }}>
+//                 Messages
+//               </Text>
+//             ),
+//           }}
+//         />
+//         <Tabs.Screen
+//           name="ProfileScreen"
+//           options={{
+//             title: "Profile",
+//             tabBarIcon: ({ color, focused }) => (
+//               <Ionicons name="person-outline" size={26} color={color} />
+//             ),
+//             tabBarLabel: ({ color }) => (
+//               <Text style={{ color, fontSize: 12, marginTop: 4 }}>Profile</Text>
+//             ),
+//           }}
+//         />
+//         <Tabs.Screen
+//           name="NotificationScreen"
+//           options={{
+//             href: null,
+//           }}
+//         />
+//         <Tabs.Screen
+//           name="ChatScreen"
+//           options={{
+//             href: null,
+//           }}
+//         />
+//         <Tabs.Screen
+//           name="BookingDetailsScreen"
+//           options={{
+//             href: null,
+//           }}
+//         />
+//       </Tabs>
+//     </ProviderProvider>
+//   );
+// }
+
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import React from "react";
-import { Text } from "react-native";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import { Text, View } from "react-native";
+import { auth, db } from "../config/firebase";
 import { ProviderProvider } from "../context/ProviderContext";
+
+// Custom Messages Icon with Badge
+const MessagesIconWithBadge = ({ color }: { color: string }) => {
+  const [unreadCount, setUnreadCount] = useState(0);
+  const currentUserId = auth.currentUser?.uid;
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const conversationsRef = collection(db, "conversations");
+    const q = query(
+      conversationsRef,
+      where("participantIds", "array-contains", currentUserId)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const conversations = snapshot.docs.map((doc) => doc.data());
+      const totalUnread = conversations.filter(
+        (conv: any) => conv.unreadCount && conv.unreadCount[currentUserId] > 0
+      ).length;
+      setUnreadCount(totalUnread);
+    });
+
+    return () => unsubscribe();
+  }, [currentUserId]);
+
+  return (
+    <View style={{ width: 26, height: 26, position: "relative" }}>
+      <Ionicons name="chatbox-ellipses-outline" size={26} color={color} />
+      {unreadCount > 0 && (
+        <View
+          style={{
+            position: "absolute",
+            top: -4,
+            right: -8,
+            backgroundColor: "#ef4444",
+            borderRadius: 10,
+            minWidth: 18,
+            height: 18,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 4,
+            borderWidth: 2,
+            borderColor: "white",
+          }}
+        >
+          <Text style={{ color: "white", fontSize: 10, fontWeight: "bold" }}>
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
 
 export default function ProviderLayout() {
   return (
@@ -68,11 +242,7 @@ export default function ProviderLayout() {
           options={{
             title: "Messages",
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                name="chatbox-ellipses-outline"
-                size={26}
-                color={color}
-              />
+              <MessagesIconWithBadge color={color} />
             ),
             tabBarLabel: ({ color }) => (
               <Text style={{ color, fontSize: 12, marginTop: 4 }}>
