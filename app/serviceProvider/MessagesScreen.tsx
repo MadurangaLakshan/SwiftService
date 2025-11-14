@@ -5,6 +5,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  Timestamp,
   where,
 } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
@@ -58,14 +59,21 @@ const MessagesScreen = () => {
       orderBy("lastMessageTime", "desc")
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const convs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Conversation[];
-      setConversations(convs);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const convs = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Conversation[];
+        setConversations(convs);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Snapshot error:", error);
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
   }, [currentUserId]);
@@ -97,29 +105,61 @@ const MessagesScreen = () => {
   };
 
   const getTimestamp = (timestamp: any) => {
+    // Return empty string if timestamp is null or undefined
     if (!timestamp) return "";
 
-    let date: Date;
-    if (timestamp.toDate) {
-      date = timestamp.toDate();
-    } else if (timestamp.seconds) {
-      date = new Date(timestamp.seconds * 1000);
-    } else {
-      date = new Date(timestamp);
+    try {
+      let date: Date;
+
+      // Handle Firestore Timestamp object
+      if (timestamp instanceof Timestamp) {
+        date = timestamp.toDate();
+      } else if (timestamp.toDate && typeof timestamp.toDate === "function") {
+        date = timestamp.toDate();
+      } else if (timestamp.seconds !== undefined) {
+        // Handle plain object with seconds (from Firestore serialization)
+        date = new Date(timestamp.seconds * 1000);
+      } else if (timestamp._seconds !== undefined) {
+        // Handle serialized format with _seconds
+        date = new Date(timestamp._seconds * 1000);
+      } else if (typeof timestamp === "number") {
+        // Handle Unix timestamp in milliseconds
+        date = new Date(timestamp);
+      } else if (typeof timestamp === "string") {
+        // Handle ISO string
+        date = new Date(timestamp);
+      } else {
+        // Last resort
+        date = new Date(timestamp);
+      }
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn("Invalid date:", timestamp);
+        return "";
+      }
+
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays === 1) return "Yesterday";
+      if (diffDays < 7) return `${diffDays}d ago`;
+
+      // Format date
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    } catch (error) {
+      console.error("Error parsing timestamp:", error, timestamp);
+      return "";
     }
-
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
   };
 
   const filteredConversations = conversations.filter((conv) => {
@@ -129,7 +169,8 @@ const MessagesScreen = () => {
   });
 
   const unreadCount = conversations.filter(
-    (conv) => currentUserId && conv.unreadCount[currentUserId] > 0
+    (conv) =>
+      currentUserId && conv.unreadCount && conv.unreadCount[currentUserId] > 0
   ).length;
 
   if (loading) {
@@ -186,9 +227,10 @@ const MessagesScreen = () => {
             const otherUser = getOtherParticipant(conversation);
             if (!otherUser) return null;
 
-            const unread = currentUserId
-              ? conversation.unreadCount[currentUserId]
-              : 0;
+            const unread =
+              currentUserId && conversation.unreadCount
+                ? conversation.unreadCount[currentUserId] || 0
+                : 0;
 
             return (
               <TouchableOpacity
