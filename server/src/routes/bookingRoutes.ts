@@ -68,7 +68,6 @@ router.post("/", authenticateUser, async (req: AuthRequest, res) => {
     const platformFee = 5;
     const totalAmount = hourlyRate * (estimatedHours || 1) + platformFee;
 
-    // Create booking
     const booking = new Booking({
       customerId,
       providerId,
@@ -89,12 +88,16 @@ router.post("/", authenticateUser, async (req: AuthRequest, res) => {
         name: customer.name,
         phone: customer.phone,
         email: customer.email,
+        image: customer.profilePhoto,
       },
       providerDetails: {
         name: provider.name,
         phone: provider.phone,
         email: provider.email,
         profilePhoto: provider.profilePhoto,
+      },
+      timeline: {
+        bookedAt: new Date(),
       },
     });
 

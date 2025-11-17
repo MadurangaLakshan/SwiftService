@@ -63,7 +63,7 @@ export const getProviderProfile = async (userId: string) => {
 
     return result;
   } catch (error: any) {
-    console.error("Error fetching customer profile:", error);
+    console.error("Error fetching provider profile:", error);
     return { success: false, error: error.message };
   }
 };
@@ -189,11 +189,12 @@ export const getProviderBookings = async (providerId: string) => {
 
 export const updateBookingStatus = async (
   bookingId: string,
-  status: string
+  status: string,
+  additionalData?: any
 ) => {
   return authenticatedRequest(`/bookings/${bookingId}/status`, {
     method: "PUT",
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, ...additionalData }),
   });
 };
 
@@ -243,6 +244,52 @@ export const cancelBooking = async (bookingId: string, reason: string) => {
   return authenticatedRequest(`/bookings/${bookingId}/cancel`, {
     method: "PUT",
     body: JSON.stringify({ reason }),
+  });
+};
+
+export const uploadWorkPhotos = async (
+  bookingId: string,
+  documentation: {
+    beforePhotos: string[];
+    afterPhotos: string[];
+    workNotes?: string;
+  }
+) => {
+  return authenticatedRequest(`/bookings/${bookingId}/work-documentation`, {
+    method: "POST",
+    body: JSON.stringify(documentation),
+  });
+};
+
+export const approveBookingCompletion = async (bookingId: string) => {
+  return authenticatedRequest(`/bookings/${bookingId}/approve`, {
+    method: "PUT",
+  });
+};
+
+export const disputeBooking = async (
+  bookingId: string,
+  disputeData: {
+    reason: string;
+    description: string;
+  }
+) => {
+  return authenticatedRequest(`/bookings/${bookingId}/dispute`, {
+    method: "POST",
+    body: JSON.stringify(disputeData),
+  });
+};
+
+export const submitBookingReview = async (
+  bookingId: string,
+  reviewData: {
+    rating: number;
+    review?: string;
+  }
+) => {
+  return authenticatedRequest(`/bookings/${bookingId}/review`, {
+    method: "POST",
+    body: JSON.stringify(reviewData),
   });
 };
 
