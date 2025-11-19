@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { Text, View } from "react-native";
-import { auth, db } from "../config/firebase";
+import { auth } from "../config/firebase";
 import { CustomerProvider } from "../context/CustomerContext";
+import { getConversations } from "../services/messageService";
+import socketService from "../socket/socketService";
 
 const MessagesIconWithBadge = ({ color }: { color: string }) => {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -13,21 +14,44 @@ const MessagesIconWithBadge = ({ color }: { color: string }) => {
   useEffect(() => {
     if (!currentUserId) return;
 
-    const conversationsRef = collection(db, "conversations");
-    const q = query(
-      conversationsRef,
-      where("participantIds", "array-contains", currentUserId)
-    );
+    // Initial fetch of conversations
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await getConversations();
+        if (response.success && response.data) {
+          const conversations = response.data;
+          const totalUnread = conversations.filter(
+            (conv: any) =>
+              conv.unreadCount &&
+              (conv.unreadCount[currentUserId] ||
+                conv.unreadCount.get?.(currentUserId) ||
+                0) > 0
+          ).length;
+          setUnreadCount(totalUnread);
+        }
+      } catch (error) {
+        console.error("Error fetching unread count:", error);
+      }
+    };
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const conversations = snapshot.docs.map((doc) => doc.data());
-      const totalUnread = conversations.filter(
-        (conv: any) => conv.unreadCount && conv.unreadCount[currentUserId] > 0
-      ).length;
-      setUnreadCount(totalUnread);
-    });
+    fetchUnreadCount();
 
-    return () => unsubscribe();
+    // Listen for real-time updates via socket
+    const handleConversationUpdate = (data: any) => {
+      console.log("Conversation updated:", data);
+      // Refetch conversations when there's an update
+      fetchUnreadCount();
+    };
+
+    socketService.onConversationUpdate(handleConversationUpdate);
+
+    // Refresh every 30 seconds as fallback
+    const interval = setInterval(fetchUnreadCount, 30000);
+
+    return () => {
+      clearInterval(interval);
+      socketService.removeMessageListener("conversation-update");
+    };
   }, [currentUserId]);
 
   return (

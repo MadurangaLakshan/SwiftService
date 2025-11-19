@@ -124,21 +124,38 @@ const ProviderDetailsScreen = () => {
 
   const handleMessage = async () => {
     try {
+      console.log("Creating conversation with provider:", userId);
+
       const response = await createConversation(userId as string);
-      if (response.success) {
+
+      console.log("Conversation response:", response);
+
+      if (response.success && response.data) {
+        // The API returns { conversationId, ...conversation }
+        const conversationId =
+          response.data.conversationId || response.data._id;
+
+        if (!conversationId) {
+          alert("Failed to get conversation ID");
+          return;
+        }
+
+        // Navigate to chat screen
         router.push({
           pathname: "/customer/ChatScreen",
           params: {
-            conversationId: response.data.conversationId,
-            otherUserId: userId,
-            name: name,
-            image: image,
+            conversationId: conversationId.toString(),
+            otherUserId: userId as string,
+            otherUserName: name as string,
+            otherUserPhoto: image as string,
           },
         });
       } else {
-        alert(`Failed to create conversation: ${response.error}`);
+        alert(
+          `Failed to create conversation: ${response.error || "Unknown error"}`
+        );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating conversation:", error);
       alert("Failed to start conversation. Please try again.");
     }

@@ -1,11 +1,11 @@
 import { Response } from "express";
-import admin, { db } from "../config/firebase";
 import { AuthRequest } from "../middleware/authMiddleware";
 import Customer from "../models/Customer";
+import { Conversation, Message } from "../models/Message";
 import Provider from "../models/Provider";
 import User from "../models/User";
 
-// Helper function to get user details based on type
+// Helper function to get user details
 const getUserDetails = async (userId: string) => {
   const user = await User.findOne({ userId });
 
@@ -21,7 +21,7 @@ const getUserDetails = async (userId: string) => {
       ? {
           name: customer.name,
           photo: customer.profilePhoto,
-          userType: "customer",
+          userType: "customer" as const,
         }
       : null;
   } else {
@@ -32,7 +32,7 @@ const getUserDetails = async (userId: string) => {
       ? {
           name: provider.name,
           photo: provider.profilePhoto,
-          userType: "provider",
+          userType: "provider" as const,
         }
       : null;
   }
@@ -41,28 +41,25 @@ const getUserDetails = async (userId: string) => {
 export const createConversation = async (req: AuthRequest, res: Response) => {
   try {
     const { otherUserId } = req.body;
-    const currentUserId = req.user!.uid; // Firebase UID from your auth middleware
+    const currentUserId = req.user!.uid;
 
     if (!otherUserId) {
       return res.status(400).json({ message: "otherUserId is required" });
     }
 
     // Check if conversation already exists
-    const existingConv = await db
-      .collection("conversations")
-      .where("participantIds", "array-contains", currentUserId)
-      .get();
-
-    const existing = existingConv.docs.find((doc) => {
-      const data = doc.data();
-      return data.participantIds.includes(otherUserId);
+    const existingConv = await Conversation.findOne({
+      participantIds: { $all: [currentUserId, otherUserId] },
     });
 
-    if (existing) {
-      return res.json({ conversationId: existing.id, ...existing.data() });
+    if (existingConv) {
+      return res.json({
+        conversationId: existingConv._id,
+        ...existingConv.toObject(),
+      });
     }
 
-    // Fetch user details from MongoDB
+    // Fetch user details
     const [currentUserDetails, otherUserDetails] = await Promise.all([
       getUserDetails(currentUserId),
       getUserDetails(otherUserId),
@@ -78,32 +75,25 @@ export const createConversation = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: "Other user not found" });
     }
 
-    // Create new conversation in Firestore
-    const conversationRef = await db.collection("conversations").add({
+    // Create new conversation
+    const conversation = await Conversation.create({
       participantIds: [currentUserId, otherUserId],
       participants: {
-        [currentUserId]: {
-          name: currentUserDetails.name,
-          photo: currentUserDetails.photo || null,
-          userType: currentUserDetails.userType,
-        },
-        [otherUserId]: {
-          name: otherUserDetails.name,
-          photo: otherUserDetails.photo || null,
-          userType: otherUserDetails.userType,
-        },
+        [currentUserId]: currentUserDetails,
+        [otherUserId]: otherUserDetails,
       },
       lastMessage: null,
-      lastMessageTime: admin.firestore.FieldValue.serverTimestamp(),
+      lastMessageTime: new Date(),
       unreadCount: {
         [currentUserId]: 0,
         [otherUserId]: 0,
       },
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    const conversation = await conversationRef.get();
-    res.json({ conversationId: conversationRef.id, ...conversation.data() });
+    res.json({
+      conversationId: conversation._id,
+      ...conversation.toObject(),
+    });
   } catch (error: any) {
     console.error("Create conversation error:", error);
     res.status(500).json({ message: error.message });
@@ -114,16 +104,11 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.uid;
 
-    const snapshot = await db
-      .collection("conversations")
-      .where("participantIds", "array-contains", userId)
-      .orderBy("lastMessageTime", "desc")
-      .get();
-
-    const conversations = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const conversations = await Conversation.find({
+      participantIds: userId,
+    })
+      .sort({ lastMessageTime: -1 })
+      .lean();
 
     res.json(conversations);
   } catch (error: any) {
@@ -152,40 +137,61 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: "User profile not found" });
     }
 
-    // Add message to Firestore
-    const messageRef = await db
-      .collection("conversations")
-      .doc(conversationId)
-      .collection("messages")
-      .add({
-        senderId: currentUserId,
-        senderName: currentUserDetails.name,
-        senderPhoto: currentUserDetails.photo || null,
-        text: text.trim(),
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        read: false,
-      });
+    // Create message
+    const message = await Message.create({
+      conversationId,
+      senderId: currentUserId,
+      senderName: currentUserDetails.name,
+      senderPhoto: currentUserDetails.photo || null,
+      text: text.trim(),
+      timestamp: new Date(),
+      read: false,
+    });
 
-    // Update conversation last message
-    const conversationRef = db.collection("conversations").doc(conversationId);
-    const conversation = await conversationRef.get();
+    // Update conversation
+    const conversation = await Conversation.findById(conversationId);
 
-    if (!conversation.exists) {
+    if (!conversation) {
       return res.status(404).json({ message: "Conversation not found" });
     }
 
-    const conversationData = conversation.data();
-    const otherUserId = conversationData!.participantIds.find(
-      (id: string) => id !== currentUserId
+    const otherUserId = conversation.participantIds.find(
+      (id) => id !== currentUserId
     );
 
-    await conversationRef.update({
-      lastMessage: text.trim(),
-      lastMessageTime: admin.firestore.FieldValue.serverTimestamp(),
-      [`unreadCount.${otherUserId}`]: admin.firestore.FieldValue.increment(1),
-    });
+    conversation.lastMessage = text.trim();
+    conversation.lastMessageTime = new Date();
 
-    res.json({ messageId: messageRef.id, success: true });
+    if (otherUserId) {
+      const currentUnread = conversation.unreadCount.get(otherUserId) || 0;
+      conversation.unreadCount.set(otherUserId, currentUnread + 1);
+    }
+
+    await conversation.save();
+
+    // Emit via Socket.io (if available)
+    const io = req.app.get("io");
+    if (io) {
+      io.to(conversationId).emit("new-message", {
+        id: message._id,
+        conversationId: message.conversationId,
+        senderId: message.senderId,
+        senderName: message.senderName,
+        senderPhoto: message.senderPhoto,
+        text: message.text,
+        timestamp: message.timestamp,
+        read: message.read,
+      });
+
+      io.to(otherUserId!).emit("conversation-updated", {
+        id: conversation._id,
+        lastMessage: conversation.lastMessage,
+        lastMessageTime: conversation.lastMessageTime,
+        unreadCount: Object.fromEntries(conversation.unreadCount),
+      });
+    }
+
+    res.json({ messageId: message._id, success: true });
   } catch (error: any) {
     console.error("Send message error:", error);
     res.status(500).json({ message: error.message });
@@ -198,30 +204,17 @@ export const getMessages = async (req: AuthRequest, res: Response) => {
     const { limit = 50 } = req.query;
     const userId = req.user!.uid;
 
-    const snapshot = await db
-      .collection("conversations")
-      .doc(conversationId)
-      .collection("messages")
-      .orderBy("timestamp", "desc")
+    const messages = await Message.find({ conversationId })
+      .sort({ timestamp: -1 })
       .limit(Number(limit))
-      .get();
-
-    const messages = snapshot.docs
-      .map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      .reverse(); // Reverse to show oldest first
+      .lean();
 
     // Mark messages as read
-    await db
-      .collection("conversations")
-      .doc(conversationId)
-      .update({
-        [`unreadCount.${userId}`]: 0,
-      });
+    await Conversation.findByIdAndUpdate(conversationId, {
+      [`unreadCount.${userId}`]: 0,
+    });
 
-    res.json(messages);
+    res.json(messages.reverse());
   } catch (error: any) {
     console.error("Get messages error:", error);
     res.status(500).json({ message: error.message });
@@ -233,12 +226,9 @@ export const markAsRead = async (req: AuthRequest, res: Response) => {
     const { conversationId } = req.params;
     const userId = req.user!.uid;
 
-    await db
-      .collection("conversations")
-      .doc(conversationId)
-      .update({
-        [`unreadCount.${userId}`]: 0,
-      });
+    await Conversation.findByIdAndUpdate(conversationId, {
+      [`unreadCount.${userId}`]: 0,
+    });
 
     res.json({ success: true });
   } catch (error: any) {
@@ -253,36 +243,21 @@ export const deleteConversation = async (req: AuthRequest, res: Response) => {
     const userId = req.user!.uid;
 
     // Verify user is part of conversation
-    const conversation = await db
-      .collection("conversations")
-      .doc(conversationId)
-      .get();
+    const conversation = await Conversation.findById(conversationId);
 
-    if (!conversation.exists) {
+    if (!conversation) {
       return res.status(404).json({ message: "Conversation not found" });
     }
 
-    const data = conversation.data();
-    if (!data?.participantIds.includes(userId)) {
+    if (!conversation.participantIds.includes(userId)) {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    // Delete all messages in the conversation
-    const messagesSnapshot = await db
-      .collection("conversations")
-      .doc(conversationId)
-      .collection("messages")
-      .get();
+    // Delete all messages
+    await Message.deleteMany({ conversationId });
 
-    const batch = db.batch();
-    messagesSnapshot.docs.forEach((doc) => {
-      batch.delete(doc.ref);
-    });
-
-    // Delete the conversation
-    batch.delete(db.collection("conversations").doc(conversationId));
-
-    await batch.commit();
+    // Delete conversation
+    await Conversation.findByIdAndDelete(conversationId);
 
     res.json({ success: true });
   } catch (error: any) {

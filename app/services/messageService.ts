@@ -15,7 +15,10 @@ const authenticatedRequest = async (
       throw new Error("No authentication token available");
     }
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const url = `${API_URL}${endpoint}`;
+    console.log("Making request to:", url);
+
+    const response = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
@@ -25,6 +28,7 @@ const authenticatedRequest = async (
     });
 
     const data = await response.json();
+    console.log("Response:", { status: response.status, data });
 
     if (!response.ok) {
       throw new Error(data.error || data.message || "Request failed");
@@ -52,7 +56,7 @@ export const getConversations = async () => {
   });
 };
 
-// Send message
+// Send message (REST API fallback)
 export const sendMessage = async (conversationId: string, text: string) => {
   return authenticatedRequest("/messages/messages", {
     method: "POST",

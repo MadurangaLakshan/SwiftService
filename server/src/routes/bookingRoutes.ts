@@ -327,4 +327,223 @@ router.put(
   }
 );
 
+// Add this endpoint to your bookings router file (after the cancel route)
+
+// Approve booking completion (customer only)
+router.put(
+  "/:bookingId/approve",
+  authenticateUser,
+  async (req: AuthRequest, res) => {
+    try {
+      const { bookingId } = req.params;
+
+      const booking = await Booking.findById(bookingId);
+
+      if (!booking) {
+        return res.status(404).json({
+          success: false,
+          error: "Booking not found",
+        });
+      }
+
+      // Only customer can approve
+      if (booking.customerId !== req.user?.uid) {
+        return res.status(403).json({
+          success: false,
+          error: "Only customer can approve completion",
+        });
+      }
+
+      // Check if booking is awaiting approval
+      if (booking.status !== "awaiting-customer-approval") {
+        return res.status(400).json({
+          success: false,
+          error: "Booking is not awaiting approval",
+        });
+      }
+
+      // Update booking status to completed
+      booking.status = "completed";
+      if (!booking.timeline) {
+        booking.timeline = {
+          bookedAt: booking.createdAt || new Date(),
+        };
+      }
+      booking.timeline.customerApprovedAt = new Date();
+
+      await booking.save();
+
+      res.json({
+        success: true,
+        message: "Booking approved successfully",
+        data: booking,
+      });
+    } catch (error: any) {
+      console.error("Error approving booking:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+);
+
+// Dispute booking (customer only)
+router.put(
+  "/:bookingId/dispute",
+  authenticateUser,
+  async (req: AuthRequest, res) => {
+    try {
+      const { bookingId } = req.params;
+      const { reason, description } = req.body;
+
+      if (!reason || !description) {
+        return res.status(400).json({
+          success: false,
+          error: "Reason and description are required",
+        });
+      }
+
+      const booking = await Booking.findById(bookingId);
+
+      if (!booking) {
+        return res.status(404).json({
+          success: false,
+          error: "Booking not found",
+        });
+      }
+
+      // Only customer can dispute
+      if (booking.customerId !== req.user?.uid) {
+        return res.status(403).json({
+          success: false,
+          error: "Only customer can dispute a booking",
+        });
+      }
+
+      // Check if booking is in a disputable state
+      if (
+        booking.status !== "awaiting-customer-approval" &&
+        booking.status !== "completed"
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "Booking cannot be disputed at this stage",
+        });
+      }
+
+      // Update booking with dispute
+      booking.status = "disputed";
+      booking.dispute = {
+        reason,
+        description,
+        raisedBy: "customer",
+        raisedAt: new Date(),
+        status: "open",
+      };
+
+      await booking.save();
+
+      res.json({
+        success: true,
+        message: "Dispute raised successfully",
+        data: booking,
+      });
+    } catch (error: any) {
+      console.error("Error disputing booking:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+);
+
+// Submit review (customer only)
+router.put(
+  "/:bookingId/review",
+  authenticateUser,
+  async (req: AuthRequest, res) => {
+    try {
+      const { bookingId } = req.params;
+      const { rating, review } = req.body;
+
+      if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({
+          success: false,
+          error: "Valid rating (1-5) is required",
+        });
+      }
+
+      const booking = await Booking.findById(bookingId);
+
+      if (!booking) {
+        return res.status(404).json({
+          success: false,
+          error: "Booking not found",
+        });
+      }
+
+      // Only customer can review
+      if (booking.customerId !== req.user?.uid) {
+        return res.status(403).json({
+          success: false,
+          error: "Only customer can review a booking",
+        });
+      }
+
+      // Check if booking is completed
+      if (booking.status !== "completed") {
+        return res.status(400).json({
+          success: false,
+          error: "Can only review completed bookings",
+        });
+      }
+
+      // Check if already reviewed
+      if (booking.rating) {
+        return res.status(400).json({
+          success: false,
+          error: "Booking already reviewed",
+        });
+      }
+
+      // Update booking with review
+      booking.rating = rating;
+      booking.review = review;
+      booking.reviewedAt = new Date();
+
+      await booking.save();
+
+      // Update provider's average rating
+      const provider = await Provider.findOne({ userId: booking.providerId });
+      if (provider) {
+        const allBookings = await Booking.find({
+          providerId: booking.providerId,
+          rating: { $exists: true },
+        });
+
+        const totalRating = allBookings.reduce(
+          (sum, b) => sum + (b.rating || 0),
+          0
+        );
+        provider.rating = totalRating / allBookings.length;
+        await provider.save();
+      }
+
+      res.json({
+        success: true,
+        message: "Review submitted successfully",
+        data: booking,
+      });
+    } catch (error: any) {
+      console.error("Error submitting review:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+);
+
 export default router;
