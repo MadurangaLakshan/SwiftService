@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Text,
@@ -45,49 +46,81 @@ const ChatScreen = () => {
     loadMessages();
   }, [conversationId]);
 
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      "keyboardDidShow",
+      () => {
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+    };
+  }, []);
+
   // Setup socket listeners
   useEffect(() => {
     if (!conversationId) return;
 
     const conversationIdStr = conversationId as string;
 
-    // Connect socket if not connected
     if (!socketService.isConnected) {
       socketService.connect().catch((err) => {
         console.error("Failed to connect socket:", err);
       });
     }
 
-    // Join this conversation
     socketService.joinConversations([conversationIdStr]);
 
-    // Listen for new messages in this conversation
     socketService.onMessage(conversationIdStr, (message: Message) => {
       console.log("Received new message:", message);
+
+      if (message.senderId === currentUserId) {
+        return;
+      }
+
       setMessages((prev) => {
-        // Avoid duplicates by checking if message already exists
         const exists = prev.some((msg) => msg._id === message._id);
         if (exists) return prev;
         return [...prev, message];
       });
 
-      // Scroll to bottom when new message arrives
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
 
-      // Mark as read immediately (will be sent via socket)
       socketService.markAsRead(conversationIdStr);
     });
 
-    // Listen for typing indicator
+    socketService.onMessage(conversationIdStr, (message: Message) => {
+      console.log("Received new message:", message);
+
+      if (message.senderId === currentUserId) {
+        return;
+      }
+
+      setMessages((prev) => {
+        const exists = prev.some((msg) => msg._id === message._id);
+        if (exists) return prev;
+        return [...prev, message];
+      });
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+
+      socketService.markAsRead(conversationIdStr);
+    });
+
     socketService.onTyping((data: { userId: string; isTyping: boolean }) => {
       if (data.userId === otherUserId) {
         setIsTyping(data.isTyping);
       }
     });
 
-    // Cleanup
     return () => {
       socketService.removeMessageListener(conversationIdStr);
       if (typingTimeoutRef.current) {
@@ -104,13 +137,7 @@ const ChatScreen = () => {
       if (response.success && response.data) {
         setMessages(response.data);
 
-        // Mark as read
         socketService.markAsRead(conversationId as string);
-
-        // Scroll to bottom after messages load
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: false });
-        }, 100);
       }
     } catch (error) {
       console.error("Error loading messages:", error);
@@ -127,19 +154,31 @@ const ChatScreen = () => {
     setSending(true);
 
     try {
-      // Stop typing indicator
       socketService.typing(conversationId as string, false);
 
-      // Send via socket
+      const optimisticMessage: Message = {
+        _id: `temp-${Date.now()}`, // Temporary ID
+        conversationId: conversationId as string,
+        senderId: currentUserId!,
+        senderName: auth.currentUser?.displayName || "You",
+        senderPhoto: auth.currentUser?.photoURL || null,
+        text: textToSend,
+        timestamp: new Date(),
+        read: false,
+      };
+
+      setMessages((prev) => [...prev, optimisticMessage]);
+
       socketService.sendMessage(conversationId as string, textToSend);
 
-      // Scroll to bottom
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     } catch (error) {
       console.error("Error sending message:", error);
-      setMessageText(textToSend); // Restore message text on error
+      setMessageText(textToSend);
+
+      setMessages((prev) => prev.filter((msg) => !msg._id.startsWith("temp-")));
     } finally {
       setSending(false);
     }
@@ -148,15 +187,12 @@ const ChatScreen = () => {
   const handleTyping = (text: string) => {
     setMessageText(text);
 
-    // Send typing indicator
     socketService.typing(conversationId as string, text.length > 0);
 
-    // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Set timeout to stop typing indicator after 2 seconds
     if (text.length > 0) {
       typingTimeoutRef.current = setTimeout(() => {
         socketService.typing(conversationId as string, false);
@@ -278,6 +314,18 @@ const ChatScreen = () => {
         keyExtractor={(item, index) => item._id || `message-${index}`}
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}
+        onContentSizeChange={() => {
+          // Scroll to end when content size changes (i.e., when messages load)
+          if (messages.length > 0) {
+            flatListRef.current?.scrollToEnd({ animated: false });
+          }
+        }}
+        onLayout={() => {
+          // Also scroll on initial layout
+          if (messages.length > 0) {
+            flatListRef.current?.scrollToEnd({ animated: false });
+          }
+        }}
         ListEmptyComponent={
           <View className="flex-1 justify-center items-center py-20">
             <Ionicons name="chatbubbles-outline" size={64} color="#d1d5db" />
@@ -294,9 +342,23 @@ const ChatScreen = () => {
           <TouchableOpacity className="mr-3">
             <Ionicons name="add-circle-outline" size={24} color="#3b82f6" />
           </TouchableOpacity>
+          {/* <TextInput
+            value={messageText}
+            onChangeText={handleTyping}
+            placeholder="Type a message..."
+            className="flex-1 text-base text-gray-800"
+            multiline
+            maxLength={5000}
+          /> */}
           <TextInput
             value={messageText}
             onChangeText={handleTyping}
+            onFocus={() => {
+              // Scroll to bottom when input is focused
+              setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: true });
+              }, 300); // Slightly longer delay to wait for keyboard animation
+            }}
             placeholder="Type a message..."
             className="flex-1 text-base text-gray-800"
             multiline
