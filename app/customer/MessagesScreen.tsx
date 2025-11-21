@@ -70,7 +70,13 @@ const MessagesScreen = () => {
 
       if (response.success && response.data) {
         // Sort by last message time
-        const sortedConversations = response.data.sort(
+
+        const filtered = response.data.filter(
+          (conv: Conversation) =>
+            conv.lastMessage !== null && conv.lastMessage !== ""
+        );
+
+        const sortedConversations = filtered.sort(
           (a: Conversation, b: Conversation) =>
             new Date(b.lastMessageTime).getTime() -
             new Date(a.lastMessageTime).getTime()
