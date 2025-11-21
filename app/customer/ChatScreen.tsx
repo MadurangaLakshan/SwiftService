@@ -64,17 +64,20 @@ const ChatScreen = () => {
     // Listen for new messages in this conversation
     socketService.onMessage(conversationIdStr, (message: Message) => {
       console.log("Received new message:", message);
-      setMessages((prev) => [...prev, message]);
+      setMessages((prev) => {
+        // Avoid duplicates by checking if message already exists
+        const exists = prev.some((msg) => msg._id === message._id);
+        if (exists) return prev;
+        return [...prev, message];
+      });
 
       // Scroll to bottom when new message arrives
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
 
-      // Mark as read if message is from other user
-      if (message.senderId !== currentUserId) {
-        socketService.markAsRead(conversationIdStr);
-      }
+      // Mark as read immediately (will be sent via socket)
+      socketService.markAsRead(conversationIdStr);
     });
 
     // Listen for typing indicator
@@ -183,7 +186,7 @@ const ChatScreen = () => {
           />
         )}
         <View
-          className={`max-w-[75%] rounded-2xl px-4 py-2 ${
+          className={`max-w-[85%] rounded-2xl px-4 py-2 ${
             isCurrentUser ? "bg-blue-600" : "bg-gray-200"
           }`}
         >
@@ -231,7 +234,7 @@ const ChatScreen = () => {
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       className="flex-1 bg-white"
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      keyboardVerticalOffset={0}
     >
       {/* Header */}
       <View className="bg-white px-4 pt-12 pb-3 border-b border-gray-200">
@@ -272,7 +275,7 @@ const ChatScreen = () => {
         ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
-        keyExtractor={(item) => item._id || item._id}
+        keyExtractor={(item, index) => item._id || `message-${index}`}
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={

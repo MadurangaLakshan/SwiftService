@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
+
 import {
   ActivityIndicator,
   FlatList,
@@ -43,12 +44,8 @@ const MessagesScreen = () => {
     // Listen for conversation updates via socket
     const handleConversationUpdate = (data: any) => {
       console.log("Conversation updated, reloading...");
+      setRefreshing(true);
       loadConversations();
-    };
-
-    // Listen for new messages
-    const handleNewMessage = (message: any) => {
-      console.log("New message received, reloading conversations...");
       loadConversations();
     };
 
@@ -58,6 +55,14 @@ const MessagesScreen = () => {
       socketService.removeMessageListener("conversation-update");
     };
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadConversations();
+
+      return () => {};
+    }, [])
+  );
 
   const loadConversations = async () => {
     try {
@@ -102,8 +107,25 @@ const MessagesScreen = () => {
 
     const otherUserData = conversation.participants[otherUserId];
 
+    // Optimistically clear unread count immediately
+    if (currentUserId && conversation.unreadCount[currentUserId] > 0) {
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv._id === conversation._id
+            ? {
+                ...conv,
+                unreadCount: {
+                  ...conv.unreadCount,
+                  [currentUserId]: 0,
+                },
+              }
+            : conv
+        )
+      );
+    }
+
     router.push({
-      pathname: "/customer/ChatScreen", // or /provider/ChatScreen based on user type
+      pathname: "/customer/ChatScreen",
       params: {
         conversationId: conversation._id,
         otherUserId: otherUserId,

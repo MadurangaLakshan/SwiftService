@@ -1,328 +1,260 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  Timestamp,
-  where,
-} from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Image,
   RefreshControl,
-  ScrollView,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { auth, db } from "../config/firebase";
+import { auth } from "../config/firebase";
 import { getConversations } from "../services/messageService";
+import socketService from "../socket/socketService";
 
 interface Conversation {
-  id: string;
+  _id: string;
   participantIds: string[];
   participants: {
-    [key: string]: {
+    [userId: string]: {
       name: string;
       photo: string | null;
       userType: "provider" | "customer";
     };
   };
   lastMessage: string | null;
-  lastMessageTime: any;
+  lastMessageTime: Date;
   unreadCount: {
-    [key: string]: number;
+    [userId: string]: number;
   };
 }
 
 const MessagesScreen = () => {
-  const [searchQuery, setSearchQuery] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const currentUserId = auth.currentUser?.uid;
 
   useEffect(() => {
-    fetchConversations();
+    loadConversations();
 
-    // Real-time listener for conversations
-    if (!currentUserId) return;
+    // Listen for conversation updates via socket
+    const handleConversationUpdate = (data: any) => {
+      console.log("Conversation updated, reloading...");
+      setRefreshing(true);
+      loadConversations();
+    };
 
-    const conversationsRef = collection(db, "conversations");
-    const q = query(
-      conversationsRef,
-      where("participantIds", "array-contains", currentUserId),
-      orderBy("lastMessageTime", "desc")
-    );
+    socketService.onConversationUpdate(handleConversationUpdate);
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const convs = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Conversation[];
-        setConversations(convs);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Snapshot error:", error);
-        setLoading(false);
-      }
-    );
+    return () => {
+      socketService.removeMessageListener("conversation-update");
+    };
+  }, []);
 
-    return () => unsubscribe();
-  }, [currentUserId]);
+  useFocusEffect(
+    useCallback(() => {
+      // When the screen focuses (i.e., when you return from ChatScreen), reload data.
+      loadConversations();
+      // Return a cleanup function (optional here, but good practice)
+      return () => {};
+    }, [])
+  );
 
-  const fetchConversations = async () => {
+  const loadConversations = async () => {
     try {
       const response = await getConversations();
+
       if (response.success && response.data) {
-        setConversations(response.data);
+        // Sort by last message time
+        const sortedConversations = response.data.sort(
+          (a: Conversation, b: Conversation) =>
+            new Date(b.lastMessageTime).getTime() -
+            new Date(a.lastMessageTime).getTime()
+        );
+        setConversations(sortedConversations);
+
+        // Join all conversations via socket
+        const conversationIds = sortedConversations.map(
+          (conv: Conversation) => conv._id
+        );
+        if (conversationIds.length > 0) {
+          socketService.joinConversations(conversationIds);
+        }
       }
     } catch (error) {
-      console.error("Error fetching conversations:", error);
+      console.error("Error loading conversations:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchConversations();
-  };
+    loadConversations();
+  }, []);
 
-  const getOtherParticipant = (conversation: Conversation) => {
+  const handleConversationPress = (conversation: Conversation) => {
     const otherUserId = conversation.participantIds.find(
       (id) => id !== currentUserId
     );
-    return otherUserId ? conversation.participants[otherUserId] : null;
+
+    if (!otherUserId) return;
+
+    const otherUserData = conversation.participants[otherUserId];
+
+    // Optimistically clear unread count immediately
+    if (currentUserId && conversation.unreadCount[currentUserId] > 0) {
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv._id === conversation._id
+            ? {
+                ...conv,
+                unreadCount: {
+                  ...conv.unreadCount,
+                  [currentUserId]: 0,
+                },
+              }
+            : conv
+        )
+      );
+    }
+
+    router.push({
+      pathname: "/serviceProvider/ChatScreen",
+      params: {
+        conversationId: conversation._id,
+        otherUserId: otherUserId,
+        otherUserName: otherUserData.name,
+        otherUserPhoto: otherUserData.photo || "",
+      },
+    });
   };
 
-  const getTimestamp = (timestamp: any) => {
-    // Return empty string if timestamp is null or undefined
-    if (!timestamp) return "";
+  const formatTime = (timestamp: Date) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = diffInMs / (1000 * 60 * 60);
 
-    try {
-      let date: Date;
-
-      // Handle Firestore Timestamp object
-      if (timestamp instanceof Timestamp) {
-        date = timestamp.toDate();
-      } else if (timestamp.toDate && typeof timestamp.toDate === "function") {
-        date = timestamp.toDate();
-      } else if (timestamp.seconds !== undefined) {
-        // Handle plain object with seconds (from Firestore serialization)
-        date = new Date(timestamp.seconds * 1000);
-      } else if (timestamp._seconds !== undefined) {
-        // Handle serialized format with _seconds
-        date = new Date(timestamp._seconds * 1000);
-      } else if (typeof timestamp === "number") {
-        // Handle Unix timestamp in milliseconds
-        date = new Date(timestamp);
-      } else if (typeof timestamp === "string") {
-        // Handle ISO string
-        date = new Date(timestamp);
-      } else {
-        // Last resort
-        date = new Date(timestamp);
-      }
-
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
-        console.warn("Invalid date:", timestamp);
-        return "";
-      }
-
-      const now = new Date();
-      const diffMs = now.getTime() - date.getTime();
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffMs / 86400000);
-
-      if (diffMins < 1) return "Just now";
-      if (diffMins < 60) return `${diffMins}m ago`;
-      if (diffHours < 24) return `${diffHours}h ago`;
-      if (diffDays === 1) return "Yesterday";
-      if (diffDays < 7) return `${diffDays}d ago`;
-
-      // Format date
-      return date.toLocaleDateString("en-US", {
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } else if (diffInHours < 48) {
+      return "Yesterday";
+    } else {
+      return date.toLocaleDateString([], {
         month: "short",
         day: "numeric",
       });
-    } catch (error) {
-      console.error("Error parsing timestamp:", error, timestamp);
-      return "";
     }
   };
 
-  const filteredConversations = conversations.filter((conv) => {
-    const other = getOtherParticipant(conv);
-    if (!other) return false;
-    return other.name.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const renderConversation = ({ item }: { item: Conversation }) => {
+    const otherUserId = item.participantIds.find((id) => id !== currentUserId);
+    if (!otherUserId) return null;
 
-  const unreadCount = conversations.filter(
-    (conv) =>
-      currentUserId && conv.unreadCount && conv.unreadCount[currentUserId] > 0
-  ).length;
+    const otherUser = item.participants[otherUserId];
+    const unreadCount = item.unreadCount[currentUserId!] || 0;
+
+    return (
+      <TouchableOpacity
+        onPress={() => handleConversationPress(item)}
+        className="flex-row items-center px-6 py-4 bg-white border-b border-gray-100"
+      >
+        <View className="relative">
+          <Image
+            source={{
+              uri: otherUser.photo || "https://via.placeholder.com/50",
+            }}
+            className="w-14 h-14 rounded-full"
+          />
+          {unreadCount > 0 && (
+            <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 justify-center items-center px-1">
+              <Text className="text-white text-xs font-bold">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View className="flex-1 ml-4">
+          <View className="flex-row items-center justify-between mb-1">
+            <Text className="text-base font-semibold text-gray-800 flex-1">
+              {otherUser.name}
+            </Text>
+            <Text className="text-xs text-gray-500 ml-2">
+              {formatTime(item.lastMessageTime)}
+            </Text>
+          </View>
+          <View className="flex-row items-center">
+            <Text
+              className={`text-sm flex-1 ${
+                unreadCount > 0
+                  ? "text-gray-800 font-semibold"
+                  : "text-gray-500"
+              }`}
+              numberOfLines={1}
+            >
+              {item.lastMessage || "No messages yet"}
+            </Text>
+            {unreadCount > 0 && (
+              <View className="w-2 h-2 bg-blue-600 rounded-full ml-2" />
+            )}
+          </View>
+          <Text className="text-xs text-gray-400 mt-1">
+            {otherUser.userType === "provider" ? "Provider" : "Customer"}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
-      <View className="flex-1 bg-white items-center justify-center">
+      <View className="flex-1 bg-white justify-center items-center">
         <ActivityIndicator size="large" color="#3b82f6" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-gray-50">
       {/* Header */}
-      <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-200">
-        <View className="flex-row items-center justify-between mb-4">
+      <View className="bg-white px-6 pt-12 pb-4 border-b border-gray-200">
+        <View className="flex-row items-center justify-between">
           <Text className="text-2xl font-bold text-gray-800">Messages</Text>
-          {unreadCount > 0 && (
-            <View className="bg-blue-600 px-3 py-1 rounded-full">
-              <Text className="text-white text-sm font-semibold">
-                {unreadCount} new
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Search Bar */}
-        <View className="flex-row items-center bg-gray-100 rounded-2xl px-4 py-3">
-          <Ionicons name="search-outline" size={20} color="gray" />
-          <TextInput
-            placeholder="Search conversations..."
-            placeholderTextColor="#9ca3af"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            className="ml-3 flex-1 text-gray-700 text-base"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Ionicons name="close-circle" size={20} color="#9ca3af" />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity>
+            <Ionicons name="create-outline" size={24} color="#3b82f6" />
+          </TouchableOpacity>
         </View>
       </View>
 
       {/* Conversations List */}
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
+      <FlatList
+        data={conversations}
+        renderItem={renderConversation}
+        keyExtractor={(item) => item._id}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-      >
-        {filteredConversations.length > 0 ? (
-          filteredConversations.map((conversation) => {
-            const otherUser = getOtherParticipant(conversation);
-            if (!otherUser) return null;
-
-            const unread =
-              currentUserId && conversation.unreadCount
-                ? conversation.unreadCount[currentUserId] || 0
-                : 0;
-
-            return (
-              <TouchableOpacity
-                key={conversation.id}
-                onPress={() =>
-                  router.push({
-                    pathname: "/serviceProvider/ChatScreen",
-                    params: {
-                      conversationId: conversation.id,
-                      otherUserId: conversation.participantIds.find(
-                        (id) => id !== currentUserId
-                      ),
-                      name: otherUser.name,
-                      image:
-                        otherUser.photo ||
-                        `https://i.pravatar.cc/150?u=${conversation.participantIds.find(
-                          (id) => id !== currentUserId
-                        )}`,
-                    },
-                  })
-                }
-                className="px-6 py-4 border-b border-gray-100 bg-white active:bg-gray-50"
-              >
-                <View className="flex-row items-center">
-                  {/* Profile Image */}
-                  <View className="relative">
-                    <Image
-                      source={{
-                        uri:
-                          otherUser.photo ||
-                          `https://i.pravatar.cc/150?u=${conversation.participantIds.find(
-                            (id) => id !== currentUserId
-                          )}`,
-                      }}
-                      className="w-14 h-14 rounded-full"
-                    />
-                  </View>
-
-                  {/* Message Content */}
-                  <View className="flex-1 ml-4">
-                    <View className="flex-row items-center justify-between mb-1">
-                      <Text className="text-base font-semibold text-gray-800">
-                        {otherUser.name}
-                      </Text>
-                      <Text className="text-xs text-gray-400">
-                        {getTimestamp(conversation.lastMessageTime)}
-                      </Text>
-                    </View>
-
-                    <Text className="text-xs text-gray-500 mb-1">
-                      {otherUser.userType === "customer"
-                        ? "Customer"
-                        : "Provider"}
-                    </Text>
-
-                    <View className="flex-row items-center justify-between">
-                      <Text
-                        className={`text-sm flex-1 ${
-                          unread > 0
-                            ? "text-gray-800 font-medium"
-                            : "text-gray-500"
-                        }`}
-                        numberOfLines={1}
-                      >
-                        {conversation.lastMessage || "No messages yet"}
-                      </Text>
-                      {unread > 0 && (
-                        <View className="bg-blue-600 rounded-full w-6 h-6 items-center justify-center ml-2">
-                          <Text className="text-white text-xs font-bold">
-                            {unread}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            );
-          })
-        ) : (
-          <View className="items-center justify-center py-20">
-            <Ionicons
-              name="chatbox-ellipses-outline"
-              size={64}
-              color="#d1d5db"
-            />
-            <Text className="text-gray-500 text-base mt-4">
-              No conversations found
+        ListEmptyComponent={
+          <View className="flex-1 justify-center items-center py-20">
+            <Ionicons name="chatbubbles-outline" size={64} color="#d1d5db" />
+            <Text className="text-gray-500 mt-4 text-center text-base">
+              No conversations yet
+            </Text>
+            <Text className="text-gray-400 text-sm text-center mt-2 px-8">
+              Start chatting with customers
             </Text>
           </View>
-        )}
-      </ScrollView>
+        }
+      />
     </View>
   );
 };
