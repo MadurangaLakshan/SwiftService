@@ -1,58 +1,33 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Text, View } from "react-native";
-import { auth } from "../config/firebase";
 import { CustomerProvider } from "../context/CustomerContext";
-import { getConversations } from "../services/messageService";
-import socketService from "../socket/socketService";
+import { useMessageStore } from "../store/messageStore";
 
 const MessagesIconWithBadge = ({ color }: { color: string }) => {
-  const [unreadCount, setUnreadCount] = useState(0);
-  const currentUserId = auth.currentUser?.uid;
+  const {
+    unreadCount,
+    fetchConversations,
+    initializeSocketListeners,
+    cleanupSocketListeners,
+  } = useMessageStore();
 
   useEffect(() => {
-    if (!currentUserId) return;
+    // Initial fetch
+    fetchConversations();
 
-    // Initial fetch of conversations
-    const fetchUnreadCount = async () => {
-      try {
-        const response = await getConversations();
-        if (response.success && response.data) {
-          const conversations = response.data;
-          const totalUnread = conversations.filter(
-            (conv: any) =>
-              conv.unreadCount &&
-              (conv.unreadCount[currentUserId] ||
-                conv.unreadCount.get?.(currentUserId) ||
-                0) > 0
-          ).length;
-          setUnreadCount(totalUnread);
-        }
-      } catch (error) {
-        console.error("Error fetching unread count:", error);
-      }
-    };
-
-    fetchUnreadCount();
-
-    // Listen for real-time updates via socket
-    const handleConversationUpdate = (data: any) => {
-      console.log("Conversation updated:", data);
-      // Refetch conversations when there's an update
-      fetchUnreadCount();
-    };
-
-    socketService.onConversationUpdate(handleConversationUpdate);
+    // Initialize socket listeners
+    initializeSocketListeners();
 
     // Refresh every 30 seconds as fallback
-    const interval = setInterval(fetchUnreadCount, 30000);
+    const interval = setInterval(fetchConversations, 30000);
 
     return () => {
       clearInterval(interval);
-      socketService.removeMessageListener("conversation-update");
+      cleanupSocketListeners();
     };
-  }, [currentUserId]);
+  }, []);
 
   return (
     <View style={{ width: 26, height: 26, position: "relative" }}>

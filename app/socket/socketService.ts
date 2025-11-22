@@ -99,6 +99,13 @@ class SocketService {
       }
     });
 
+    this.socket.on("message-read", (data) => {
+      const listener = this.messageListeners.get("message-read");
+      if (listener) {
+        listener(data);
+      }
+    });
+
     this.socket.on("error", (error) => {
       console.error("Socket error:", error);
     });
@@ -144,6 +151,10 @@ class SocketService {
 
   onConversationUpdate(callback: (data: any) => void) {
     this.messageListeners.set("conversation-update", callback);
+  }
+
+  onMessageRead(callback: (data: any) => void) {
+    this.messageListeners.set("message-read", callback);
   }
 
   removeMessageListener(conversationId: string) {

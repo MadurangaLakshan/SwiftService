@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -11,8 +11,7 @@ import {
   View,
 } from "react-native";
 import { auth } from "../config/firebase";
-import { getConversations } from "../services/messageService";
-import socketService from "../socket/socketService";
+import { useMessageStore } from "../store/messageStore";
 
 interface Conversation {
   _id: string;
@@ -32,73 +31,19 @@ interface Conversation {
 }
 
 const MessagesScreen = () => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const currentUserId = auth.currentUser?.uid;
-
-  useEffect(() => {
-    loadConversations();
-
-    // Listen for conversation updates via socket
-    const handleConversationUpdate = (data: any) => {
-      console.log("Conversation updated, reloading...");
-      setRefreshing(true);
-      loadConversations();
-    };
-
-    socketService.onConversationUpdate(handleConversationUpdate);
-
-    return () => {
-      socketService.removeMessageListener("conversation-update");
-    };
-  }, []);
+  const { conversations, loading, fetchConversations, markConversationAsRead } =
+    useMessageStore();
 
   useFocusEffect(
     useCallback(() => {
-      // When the screen focuses (i.e., when you return from ChatScreen), reload data.
-      loadConversations();
-      // Return a cleanup function (optional here, but good practice)
+      fetchConversations();
       return () => {};
     }, [])
   );
 
-  const loadConversations = async () => {
-    try {
-      const response = await getConversations();
-
-      if (response.success && response.data) {
-        const filtered = response.data.filter(
-          (conv: Conversation) =>
-            conv.lastMessage !== null && conv.lastMessage !== ""
-        );
-        // Sort by last message time
-        const sortedConversations = filtered.sort(
-          (a: Conversation, b: Conversation) =>
-            new Date(b.lastMessageTime).getTime() -
-            new Date(a.lastMessageTime).getTime()
-        );
-        setConversations(sortedConversations);
-
-        // Join all conversations via socket
-        const conversationIds = sortedConversations.map(
-          (conv: Conversation) => conv._id
-        );
-        if (conversationIds.length > 0) {
-          socketService.joinConversations(conversationIds);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading conversations:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadConversations();
+    fetchConversations();
   }, []);
 
   const handleConversationPress = (conversation: Conversation) => {
@@ -110,22 +55,8 @@ const MessagesScreen = () => {
 
     const otherUserData = conversation.participants[otherUserId];
 
-    // Optimistically clear unread count immediately
-    if (currentUserId && conversation.unreadCount[currentUserId] > 0) {
-      setConversations((prev) =>
-        prev.map((conv) =>
-          conv._id === conversation._id
-            ? {
-                ...conv,
-                unreadCount: {
-                  ...conv.unreadCount,
-                  [currentUserId]: 0,
-                },
-              }
-            : conv
-        )
-      );
-    }
+    // Optimistically mark as read in the store
+    markConversationAsRead(conversation._id);
 
     router.push({
       pathname: "/serviceProvider/ChatScreen",
@@ -219,7 +150,7 @@ const MessagesScreen = () => {
     );
   };
 
-  if (loading) {
+  if (loading && conversations.length === 0) {
     return (
       <View className="flex-1 bg-white justify-center items-center">
         <ActivityIndicator size="large" color="#3b82f6" />
@@ -245,7 +176,7 @@ const MessagesScreen = () => {
         renderItem={renderConversation}
         keyExtractor={(item) => item._id}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={loading} onRefresh={onRefresh} />
         }
         ListEmptyComponent={
           <View className="flex-1 justify-center items-center py-20">
