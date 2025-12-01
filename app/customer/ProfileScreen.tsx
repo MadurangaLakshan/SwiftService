@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { signOut } from "firebase/auth";
-import React from "react";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   ScrollView,
@@ -12,6 +13,8 @@ import {
 } from "react-native";
 import { auth } from "../config/firebase";
 import { useCustomer } from "../context/CustomerContext";
+import { updateCustomerProfilePicture } from "../services/apiService";
+import { pickAndConvertImage } from "../utils/imageUpload";
 
 interface MenuItem {
   id: number;
@@ -28,7 +31,9 @@ interface Stat {
 }
 
 const ProfileScreen: React.FC = () => {
-  const { customerData, loading } = useCustomer();
+  const { customerData, loading, refreshCustomerData } = useCustomer();
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   const menuItems: MenuItem[] = [
     {
       id: 1,
@@ -94,6 +99,65 @@ const ProfileScreen: React.FC = () => {
     { label: "Favorites", value: "8", icon: "heart" },
   ];
 
+  const handleChangeProfilePicture = async () => {
+    if (!auth.currentUser) {
+      Alert.alert("Error", "You must be logged in to change profile picture");
+      return;
+    }
+
+    try {
+      console.log("Step 1: Picking and converting image...");
+      setUploadingImage(true);
+
+      // Pick image and convert to base64
+      const base64Image = await pickAndConvertImage();
+
+      if (!base64Image) {
+        console.log("No image selected");
+        setUploadingImage(false);
+        return;
+      }
+
+      console.log("Step 2: Image converted to base64");
+      console.log("Step 3: Uploading to MongoDB...");
+
+      // Upload base64 to MongoDB
+      const result = await updateCustomerProfilePicture(
+        auth.currentUser.uid,
+        base64Image
+      );
+
+      console.log("Step 4: Upload result:", result);
+
+      if (result.success) {
+        Alert.alert("Success", "Profile picture updated successfully!");
+
+        console.log("Step 5: Refreshing customer data...");
+        if (refreshCustomerData) {
+          await refreshCustomerData();
+        }
+      } else {
+        throw new Error(result.error || "Failed to update profile picture");
+      }
+    } catch (error: any) {
+      console.error("Error changing profile picture:", error);
+
+      let errorMessage = "Failed to upload image. Please try again.";
+
+      if (error.message.includes("too large")) {
+        errorMessage = "Image is too large. Please select a smaller image.";
+      } else if (error.message.includes("Invalid image")) {
+        errorMessage = "Invalid image format. Please select a valid image.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleLogout = async () => {
     Alert.alert(
       "Logout",
@@ -109,7 +173,6 @@ const ProfileScreen: React.FC = () => {
           onPress: async () => {
             try {
               await signOut(auth);
-
               console.log("User logged out successfully");
               router.replace("/");
             } catch (error: any) {
@@ -123,6 +186,11 @@ const ProfileScreen: React.FC = () => {
     );
   };
 
+  // Use base64 image directly in Image component
+  const profileImageSource = customerData?.profilePhoto
+    ? { uri: customerData.profilePhoto }
+    : { uri: "https://i.pravatar.cc/150?img=68" };
+
   return (
     <View className="flex-1 bg-gray-50">
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -131,11 +199,19 @@ const ProfileScreen: React.FC = () => {
           <View className="items-center">
             <View className="relative">
               <Image
-                source={{ uri: "https://i.pravatar.cc/150?img=68" }}
+                source={profileImageSource}
                 className="w-28 h-28 rounded-full border-4 border-white"
               />
-              <TouchableOpacity className="absolute bottom-0 right-0 bg-white rounded-full p-2">
-                <Ionicons name="camera" size={20} color="#3b82f6" />
+              <TouchableOpacity
+                className="absolute bottom-0 right-0 bg-white rounded-full p-2"
+                onPress={handleChangeProfilePicture}
+                disabled={uploadingImage}
+              >
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" color="#3b82f6" />
+                ) : (
+                  <Ionicons name="camera" size={20} color="#3b82f6" />
+                )}
               </TouchableOpacity>
             </View>
             <Text className="text-white text-2xl font-bold mt-4">

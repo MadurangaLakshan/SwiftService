@@ -21,8 +21,11 @@ import { registerWithFirebase } from "../services/authService";
 
 export default function RegisterCustomer() {
   const router = useRouter();
-  const { setCustomerData } = useCustomer();
+  const customerContext = useCustomer() as any;
   const [step, setStep] = useState(1);
+
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string>("");
+  const [tempUserId, setTempUserId] = useState<string>("");
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -146,8 +149,8 @@ export default function RegisterCustomer() {
       if (result.success) {
         console.log("Customer registered successfully:", result.data);
 
-        // Directly set the customer data in context
-        setCustomerData(result.data);
+        // Directly set the customer data in context (use safe access in case the setter isn't present on the context type)
+        customerContext.setCustomerData?.(result.data);
 
         Alert.alert("Success!", "Your account has been created successfully!", [
           {
@@ -170,7 +173,7 @@ export default function RegisterCustomer() {
 
   const renderProgressBar = () => (
     <View className="flex-row items-center mb-6 px-4">
-      {[1, 2].map((num) => (
+      {[1, 2, 3].map((num) => (
         <React.Fragment key={num}>
           <View
             className={`w-8 h-8 rounded-full items-center justify-center ${
@@ -185,7 +188,7 @@ export default function RegisterCustomer() {
               {num}
             </Text>
           </View>
-          {num < 2 && (
+          {num < 3 && ( // Changed from num < 2
             <View
               className={`flex-1 h-1 ${
                 step > num ? "bg-blue-500" : "bg-gray-300"

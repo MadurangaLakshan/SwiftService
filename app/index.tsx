@@ -41,23 +41,6 @@ export default function Index() {
           Register
         </Text>
       </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => router.push("/customer/HomeScreen")}
-        className="bg-blue-500 w-3/4  p-4 rounded-full"
-      >
-        <Text className="text-white text-center font-bold text-lg">
-          customerHomepage
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => router.push("/serviceProvider/HomeScreen")}
-        className="bg-blue-500 w-3/4  p-4 rounded-full"
-      >
-        <Text className="text-white text-center font-bold text-lg">
-          providerHomepage
-        </Text>
-      </TouchableOpacity>
     </View>
   );
 }

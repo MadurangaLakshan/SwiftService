@@ -79,20 +79,50 @@ export const updateProviderProfilePicture = async (
   userId: string,
   imageUrl: string
 ) => {
-  return authenticatedRequest(`/providers/${userId}`, {
-    method: "PUT",
-    body: JSON.stringify({ profilePhoto: imageUrl }),
-  });
+  try {
+    const result = await authenticatedRequest(`/providers/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify({ profilePhoto: imageUrl }),
+    });
+
+    // Handle both response formats from your backend
+    if (result.success || result.data) {
+      return {
+        success: true,
+        data: result.data || result,
+      };
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error("Error updating provider profile picture:", error);
+    return { success: false, error: error.message };
+  }
 };
 
 export const updateCustomerProfilePicture = async (
   userId: string,
   imageUrl: string
 ) => {
-  return authenticatedRequest(`/customers/${userId}`, {
-    method: "PUT",
-    body: JSON.stringify({ profilePhoto: imageUrl }),
-  });
+  try {
+    const result = await authenticatedRequest(`/customers/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify({ profilePhoto: imageUrl }),
+    });
+
+    // Handle both response formats from your backend
+    if (result.success || result.data) {
+      return {
+        success: true,
+        data: result.data || result,
+      };
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error("Error updating customer profile picture:", error);
+    return { success: false, error: error.message };
+  }
 };
 
 export const deleteProviderProfile = async (userId: string) => {

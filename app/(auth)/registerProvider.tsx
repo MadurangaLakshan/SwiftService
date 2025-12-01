@@ -17,9 +17,9 @@ import {
 } from "react-native";
 import colors from "tailwindcss/colors";
 import { auth } from "../config/firebase";
-import ProfilePictureUpload from "../ProfilePictureUpload";
 import { registerProviderProfile } from "../services/apiService";
 import { registerWithFirebase } from "../services/authService";
+import ProfilePictureUpload from "../utils/ProfilePictureUpload";
 
 type ServiceType = {
   id: string;

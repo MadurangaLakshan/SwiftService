@@ -3,32 +3,34 @@ import { auth } from "../config/firebase";
 import { getCustomerProfile } from "../services/apiService";
 
 interface CustomerData {
+  _id: string;
   userId: string;
   name: string;
   email: string;
   phone: string;
-  profilePhoto?: string;
-  address?: string;
-  city?: string;
-  location?: {
+  location: {
     address: string;
     city: string;
     postalCode: string;
   };
-  propertyType?: string;
+  propertyType: string;
+  profilePhoto: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface CustomerContextType {
   customerData: CustomerData | null;
   loading: boolean;
-  setCustomerData: (data: CustomerData) => void;
+  error: string | null;
   refreshCustomerData: () => Promise<void>;
 }
 
 const CustomerContext = createContext<CustomerContextType>({
   customerData: null,
   loading: true,
-  setCustomerData: () => {},
+  error: null,
   refreshCustomerData: async () => {},
 });
 
@@ -37,56 +39,45 @@ export const useCustomer = () => useContext(CustomerContext);
 export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [customerData, setCustomerDataState] = useState<CustomerData | null>(
-    null
-  );
+  const [customerData, setCustomerData] = useState<CustomerData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const setCustomerData = (data: CustomerData) => {
-    setCustomerDataState(data);
-    console.log("New customer data:", data);
-    setLoading(false);
-  };
-
-  const fetchCustomerData = async (retryCount = 0) => {
+  const fetchCustomerData = async () => {
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        setCustomerDataState(null);
+      const user = auth.currentUser;
+
+      if (!user) {
         setLoading(false);
         return;
       }
 
-      const response = await getCustomerProfile(currentUser.uid);
+      setLoading(true);
+      setError(null);
 
-      if (response.success && response.data) {
-        setCustomerDataState(response.data);
-        setLoading(false);
-      } else if (response.error === "Customer not found" && retryCount < 3) {
-        console.log(`Customer not found, retrying... (${retryCount + 1}/3)`);
-        setTimeout(() => fetchCustomerData(retryCount + 1), 1000);
+      const result = await getCustomerProfile(user.uid);
+
+      if (result && "data" in result && result.data) {
+        setCustomerData(result.data);
+      } else if (result && typeof result === "object" && "_id" in result) {
+        setCustomerData(result as unknown as CustomerData);
       } else {
-        console.log("Customer profile not found after retries");
-        setCustomerDataState(null);
-        setLoading(false);
+        setError((result as any)?.error || "Failed to fetch customer data");
       }
-    } catch (error) {
-      console.error("Error fetching customer data:", error);
+    } catch (err: any) {
+      console.error("Error fetching customer data:", err);
+      setError(err.message || "An error occurred");
+    } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        fetchCustomerData();
-      } else {
-        setCustomerDataState(null);
-        setLoading(false);
-      }
-    });
+  const refreshCustomerData = async () => {
+    await fetchCustomerData();
+  };
 
-    return unsubscribe;
+  useEffect(() => {
+    fetchCustomerData();
   }, []);
 
   return (
@@ -94,8 +85,8 @@ export const CustomerProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         customerData,
         loading,
-        setCustomerData,
-        refreshCustomerData: () => fetchCustomerData(0),
+        error,
+        refreshCustomerData,
       }}
     >
       {children}
