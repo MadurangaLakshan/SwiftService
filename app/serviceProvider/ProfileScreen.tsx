@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { signOut } from "firebase/auth";
-import React from "react";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   ScrollView,
@@ -12,6 +13,8 @@ import {
 } from "react-native";
 import { auth } from "../config/firebase";
 import { useProvider } from "../context/ProviderContext";
+import { updateProviderProfilePicture } from "../services/apiService";
+import { pickAndConvertImage } from "../utils/imageUpload";
 
 interface MenuItem {
   id: number;
@@ -28,7 +31,9 @@ interface Stat {
 }
 
 const ProfileScreen: React.FC = () => {
-  const { providerData, loading } = useProvider();
+  const { providerData, loading, refreshProviderData } = useProvider();
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   const menuItems: MenuItem[] = [
     {
       id: 1,
@@ -89,31 +94,77 @@ const ProfileScreen: React.FC = () => {
   ];
 
   const stats: Stat[] = [
-    { label: "Bookings", value: "24", icon: "calendar" },
-    { label: "Reviews", value: "12", icon: "star" },
-    { label: "Favorites", value: "8", icon: "heart" },
+    {
+      label: "Jobs",
+      value: providerData?.totalJobs?.toString() || "0",
+      icon: "briefcase",
+    },
+    {
+      label: "Rating",
+      value: providerData?.rating?.toFixed(1) || "N/A",
+      icon: "star",
+    },
+    {
+      label: "Reviews",
+      value: providerData?.totalReviews?.toString() || "0",
+      icon: "document-text",
+    },
   ];
+
+  const handleChangeProfilePicture = async () => {
+    if (!auth.currentUser) {
+      Alert.alert("Error", "You must be logged in to change profile picture");
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+
+      const base64Image = await pickAndConvertImage();
+
+      if (!base64Image) {
+        setUploadingImage(false);
+        return;
+      }
+
+      const result = await updateProviderProfilePicture(
+        auth.currentUser.uid,
+        base64Image
+      );
+
+      if (result.success) {
+        Alert.alert("Success", "Profile picture updated successfully!");
+        if (refreshProviderData) await refreshProviderData();
+      } else {
+        throw new Error(result.error || "Failed to update profile picture");
+      }
+    } catch (error: any) {
+      let errorMessage = "Failed to upload image. Please try again.";
+      if (error.message.includes("too large")) {
+        errorMessage = "Image is too large. Please select a smaller image.";
+      } else if (error.message.includes("Invalid image")) {
+        errorMessage = "Invalid image format. Please select a valid image.";
+      }
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleLogout = async () => {
     Alert.alert(
       "Logout",
       "Are you sure you want to logout?",
       [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
+        { text: "Cancel", style: "cancel" },
         {
           text: "Logout",
           style: "destructive",
           onPress: async () => {
             try {
               await signOut(auth);
-
-              console.log("User logged out successfully");
               router.replace("/");
             } catch (error: any) {
-              console.error("Logout error:", error);
               Alert.alert("Error", "Failed to logout. Please try again.");
             }
           },
@@ -123,34 +174,47 @@ const ProfileScreen: React.FC = () => {
     );
   };
 
+  const profileImageSource = providerData?.profilePhoto
+    ? { uri: providerData.profilePhoto }
+    : { uri: "https://i.pravatar.cc/150?img=68" };
+
   return (
     <View className="flex-1 bg-gray-50">
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header Section */}
         <View className="bg-blue-600 pt-12 pb-8 px-6">
           <View className="items-center">
             <View className="relative">
               <Image
-                source={{ uri: "https://i.pravatar.cc/150?img=68" }}
+                source={profileImageSource}
                 className="w-28 h-28 rounded-full border-4 border-white"
               />
-              <TouchableOpacity className="absolute bottom-0 right-0 bg-white rounded-full p-2">
-                <Ionicons name="camera" size={20} color="#3b82f6" />
+              <TouchableOpacity
+                className="absolute bottom-0 right-0 bg-white rounded-full p-2"
+                onPress={handleChangeProfilePicture}
+                disabled={uploadingImage}
+              >
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" />
+                ) : (
+                  <Ionicons name="camera" size={20} color="#3b82f6" />
+                )}
               </TouchableOpacity>
             </View>
+
             <Text className="text-white text-2xl font-bold mt-4">
               {providerData?.name}
             </Text>
+
             <Text className="text-blue-100 text-base mt-1">
               {providerData?.email}
             </Text>
+
             <Text className="text-blue-100 text-sm mt-1">
               {providerData?.phone}
             </Text>
           </View>
         </View>
 
-        {/* Stats Section */}
         <View className="flex-row mx-6 -mt-6 bg-white rounded-2xl shadow-sm border border-gray-200">
           {stats.map((stat, index) => (
             <View
@@ -170,7 +234,7 @@ const ProfileScreen: React.FC = () => {
           ))}
         </View>
 
-        {/* Account Section */}
+        {/* Other sections remain same */}
         <View className="mt-6 px-6">
           <Text className="text-lg font-semibold text-gray-800 mb-3">
             Account Settings
