@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { updateProfile } from "firebase/auth";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Keyboard,
@@ -184,23 +185,41 @@ export default function RegisterProvider() {
     setLoading(true);
 
     try {
+      console.log("🔐 Creating Firebase account...");
       const authResult = await registerWithFirebase(email, password);
 
       if (!authResult.success) {
         Alert.alert("Registration Failed", authResult.error);
+        setLoading(false);
         return;
       }
 
-      setTempUserId(authResult.userId ?? "");
+      const newUserId = authResult.userId ?? "";
+      setTempUserId(newUserId);
+      console.log("✅ Firebase account created. User ID:", newUserId);
 
       if (auth.currentUser) {
         await updateProfile(auth.currentUser, {
           displayName: fullName,
         });
+        console.log("✅ Display name updated");
+      }
+
+      console.log("💼 Creating provider profile...");
+
+      const finalProfilePictureUrl = profilePictureUrl || "";
+
+      if (finalProfilePictureUrl) {
+        console.log(
+          "📸 Profile picture included (length):",
+          finalProfilePictureUrl.length
+        );
+      } else {
+        console.log("ℹ️ No profile picture selected");
       }
 
       const providerData = {
-        userId: authResult.userId,
+        userId: newUserId,
         name: fullName,
         email: email,
         phone: phone,
@@ -218,23 +237,25 @@ export default function RegisterProvider() {
           serviceRadius: parseInt(serviceRadius),
         },
         serviceRadius: parseInt(serviceRadius),
-        profilePhoto: profilePictureUrl,
+        profilePhoto: finalProfilePictureUrl,
       };
 
       const result = await registerProviderProfile(providerData);
 
       if (result.success) {
+        console.log("🎉 Provider registered successfully!");
         Alert.alert("Success!", "Your provider account has been created!", [
           {
             text: "OK",
             onPress: () => router.replace("/serviceProvider/HomeScreen"),
           },
         ]);
-        console.log("provider registered");
       } else {
+        console.error("❌ Provider registration failed:", result.error);
         Alert.alert("Error", result.error);
       }
     } catch (error: any) {
+      console.error("❌ Registration error:", error);
       Alert.alert("Error", error.message);
     } finally {
       setLoading(false);
@@ -689,6 +710,7 @@ export default function RegisterProvider() {
         userId={tempUserId}
         userType="provider"
         onUploadComplete={(url) => setProfilePictureUrl(url)}
+        isRegistration={true}
       />
 
       <View className="bg-blue-50 p-4 rounded-lg border border-blue-200">
@@ -749,13 +771,26 @@ export default function RegisterProvider() {
                     </Text>
                   </TouchableOpacity>
                 )}
+
                 <TouchableOpacity
                   onPress={handleNext}
-                  className="flex-1 bg-blue-500 p-3 rounded"
+                  disabled={loading}
+                  className={`flex-1 p-3 rounded ${
+                    loading ? "bg-blue-300" : "bg-blue-500"
+                  }`}
                 >
-                  <Text className="text-white text-center font-bold">
-                    {step === 5 ? "Complete Registration" : "Next"}
-                  </Text>
+                  {loading && step === 5 ? (
+                    <View className="flex-row items-center justify-center">
+                      <ActivityIndicator size="small" color="white" />
+                      <Text className="text-white text-center font-bold ml-2">
+                        Creating your account...
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text className="text-white text-center font-bold">
+                      {step === 5 ? "Complete Registration" : "Next"}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </View>
 

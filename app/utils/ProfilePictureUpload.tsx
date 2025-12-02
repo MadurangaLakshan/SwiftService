@@ -20,6 +20,7 @@ interface ProfilePictureUploadProps {
   userId: string;
   userType: "customer" | "provider";
   onUploadComplete: (url: string) => void;
+  isRegistration?: boolean;
 }
 
 const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
@@ -27,6 +28,7 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
   userId,
   userType,
   onUploadComplete,
+  isRegistration = false,
 }) => {
   const [uploading, setUploading] = useState(false);
   const [localImageUri, setLocalImageUri] = useState<string>("");
@@ -44,8 +46,21 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
         return;
       }
 
+      // Show preview immediately
       setLocalImageUri(base64Image);
 
+      // During registration: just preview, don't upload yet
+      if (isRegistration) {
+        onUploadComplete(base64Image);
+        Alert.alert(
+          "Photo Selected",
+          "Your photo will be uploaded when you complete registration."
+        );
+        setUploading(false);
+        return;
+      }
+
+      // Profile editing: upload immediately
       const updateFunction =
         userType === "customer"
           ? updateCustomerProfilePicture
@@ -55,7 +70,6 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
 
       if (result.success) {
         const newUrl = result.data?.profilePhoto || base64Image;
-
         onUploadComplete(newUrl);
         Alert.alert("Success", "Profile picture updated successfully!");
       } else {
@@ -65,11 +79,7 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
       }
     } catch (error: any) {
       console.error("Error uploading profile picture:", error);
-      Alert.alert(
-        "Error",
-        error.message || "Failed to upload image. Please check server limits."
-      );
-
+      Alert.alert("Error", error.message || "Failed to upload image.");
       setLocalImageUri("");
     } finally {
       setUploading(false);
@@ -103,10 +113,20 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
             <Ionicons name="camera" size={20} color="white" />
           )}
         </TouchableOpacity>
+
+        {isRegistration && displayImage && (
+          <View className="absolute -top-2 -right-2 bg-green-500 rounded-full px-2 py-1">
+            <Text className="text-white text-xs font-bold">Preview</Text>
+          </View>
+        )}
       </View>
 
       <Text className="text-gray-600 text-sm mt-3 text-center">
-        {displayImage ? "Tap camera to change" : "Tap camera to add photo"}
+        {isRegistration && displayImage
+          ? "Photo ready! Will upload on registration"
+          : displayImage
+          ? "Tap camera to change"
+          : "Tap camera to add photo"}
       </Text>
     </View>
   );
