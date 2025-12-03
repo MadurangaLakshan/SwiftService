@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Keyboard,
@@ -18,6 +19,7 @@ import colors from "tailwindcss/colors";
 import { useCustomer } from "../context/CustomerContext";
 import { registerCustomerProfile } from "../services/apiService";
 import { registerWithFirebase } from "../services/authService";
+import ProfilePictureUpload from "../utils/ProfilePictureUpload";
 
 export default function RegisterCustomer() {
   const router = useRouter();
@@ -99,6 +101,11 @@ export default function RegisterCustomer() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const validateStep3 = () => {
+    // Profile picture is optional, always valid
+    return true;
+  };
+
   const handleNext = () => {
     let isValid = false;
 
@@ -109,11 +116,14 @@ export default function RegisterCustomer() {
       case 2:
         isValid = validateStep2();
         break;
+      case 3:
+        isValid = validateStep3();
+        break;
     }
 
-    if (isValid && step < 2) {
+    if (isValid && step < 3) {
       setStep(step + 1);
-    } else if (isValid && step === 2) {
+    } else if (isValid && step === 3) {
       handleSubmit();
     }
   };
@@ -122,15 +132,35 @@ export default function RegisterCustomer() {
     setLoading(true);
 
     try {
+      console.log("🔐 Creating Firebase account...");
       const authResult = await registerWithFirebase(email, password);
+
       if (!authResult.success) {
         Alert.alert("Registration Failed", authResult.error);
         setLoading(false);
         return;
       }
 
+      const newUserId = authResult.userId ?? "";
+      setTempUserId(newUserId);
+      console.log("✅ Firebase account created. User ID:", newUserId);
+
+      // Prepare customer data with profile picture
+      console.log("💼 Creating customer profile...");
+
+      const finalProfilePictureUrl = profilePictureUrl || "";
+
+      if (finalProfilePictureUrl) {
+        console.log(
+          "📸 Profile picture included (length):",
+          finalProfilePictureUrl.length
+        );
+      } else {
+        console.log("ℹ️ No profile picture selected");
+      }
+
       const customerData = {
-        userId: authResult.userId,
+        userId: newUserId,
         name: fullName,
         email: email,
         phone: phone,
@@ -140,16 +170,20 @@ export default function RegisterCustomer() {
           postalCode,
         },
         propertyType,
+        profilePhoto: finalProfilePictureUrl, // Add profile photo
       };
 
-      console.log("Sending customer data:", customerData);
+      console.log("Sending customer data:", {
+        ...customerData,
+        profilePhoto: customerData.profilePhoto ? "base64..." : "",
+      });
 
       const result = await registerCustomerProfile(customerData);
 
       if (result.success) {
-        console.log("Customer registered successfully:", result.data);
+        console.log("🎉 Customer registered successfully:", result.data);
 
-        // Directly set the customer data in context (use safe access in case the setter isn't present on the context type)
+        // Set customer data in context
         customerContext.setCustomerData?.(result.data);
 
         Alert.alert("Success!", "Your account has been created successfully!", [
@@ -161,10 +195,11 @@ export default function RegisterCustomer() {
           },
         ]);
       } else {
+        console.error("❌ Customer registration failed:", result.error);
         Alert.alert("Error", result.error);
       }
     } catch (error: any) {
-      console.error("Registration error:", error);
+      console.error("❌ Registration error:", error);
       Alert.alert("Error", error.message);
     } finally {
       setLoading(false);
@@ -188,7 +223,7 @@ export default function RegisterCustomer() {
               {num}
             </Text>
           </View>
-          {num < 3 && ( // Changed from num < 2
+          {num < 3 && (
             <View
               className={`flex-1 h-1 ${
                 step > num ? "bg-blue-500" : "bg-gray-300"
@@ -462,6 +497,35 @@ export default function RegisterCustomer() {
     </View>
   );
 
+  const renderStep3 = () => (
+    <View className="w-full">
+      <Text className="text-2xl font-bold mb-2">Profile Picture</Text>
+      <Text className="text-gray-600 mb-6">Add a profile photo (optional)</Text>
+
+      <ProfilePictureUpload
+        currentImageUrl={profilePictureUrl}
+        userId={tempUserId}
+        userType="customer"
+        onUploadComplete={(url) => setProfilePictureUrl(url)}
+        isRegistration={true}
+      />
+
+      <View className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+        <View className="flex-row items-start">
+          <Ionicons
+            name="information-circle"
+            size={20}
+            color={colors.blue[600]}
+          />
+          <Text className="flex-1 ml-2 text-sm text-blue-800">
+            Adding a profile photo helps service providers recognize you. You
+            can skip this and add it later in your profile settings.
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-white"
@@ -489,6 +553,7 @@ export default function RegisterCustomer() {
 
               {step === 1 && renderStep1()}
               {step === 2 && renderStep2()}
+              {step === 3 && renderStep3()}
 
               <View className="flex-row gap-3 mt-6">
                 {step > 1 && (
@@ -508,13 +573,18 @@ export default function RegisterCustomer() {
                     loading ? "bg-blue-300" : "bg-blue-500"
                   }`}
                 >
-                  <Text className="text-white text-center font-bold">
-                    {loading
-                      ? "Processing..."
-                      : step === 2
-                      ? "Complete Registration"
-                      : "Next"}
-                  </Text>
+                  {loading && step === 3 ? (
+                    <View className="flex-row items-center justify-center">
+                      <ActivityIndicator size="small" color="white" />
+                      <Text className="text-white text-center font-bold ml-2">
+                        Creating your account...
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text className="text-white text-center font-bold">
+                      {step === 3 ? "Complete Registration" : "Next"}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </View>
 
