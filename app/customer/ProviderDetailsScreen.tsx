@@ -298,7 +298,20 @@ const ProviderDetailsScreen = () => {
         <View className="mx-6 mt-4 bg-white rounded-2xl p-4 border border-gray-200 mb-6">
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-sm font-semibold text-gray-500">REVIEWS</Text>
-            <Text className="text-sm text-blue-600">See All</Text>
+            <TouchableOpacity
+              onPress={() =>
+                router.push({
+                  pathname: "/customer/ProviderReviewsScreen",
+                  params: {
+                    providerId: userId as string,
+                    providerName: name as string,
+                    averageRating: rating as string,
+                  },
+                })
+              }
+            >
+              <Text className="text-sm text-blue-600 font-medium">See All</Text>
+            </TouchableOpacity>
           </View>
 
           {[1, 2].map((item) => (

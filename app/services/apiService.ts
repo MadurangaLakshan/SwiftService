@@ -236,7 +236,7 @@ export const createReview = async (reviewData: any) => {
 };
 
 export const getProviderReviews = async (providerId: string) => {
-  return authenticatedRequest(`/reviews/provider/${providerId}`, {
+  return authenticatedRequest(`/providers/${providerId}/reviews`, {
     method: "GET",
   });
 };

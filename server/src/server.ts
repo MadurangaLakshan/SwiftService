@@ -9,6 +9,7 @@ import bookingRoutes from "./routes/bookingRoutes";
 import customerRoutes from "./routes/customerRoutes";
 import messageRoutes from "./routes/messageRoute";
 import providerRoutes from "./routes/providerRoutes";
+import reviewRoutes from "./routes/reviewRoutes";
 import userRoutes from "./routes/userRoutes";
 import { handleSocketConnection } from "./socket/messageSocket";
 
@@ -46,6 +47,7 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api", reviewRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "OK", message: "Server is running" });

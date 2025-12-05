@@ -152,6 +152,12 @@ export default function CustomerLayout() {
             href: null,
           }}
         />
+        <Tabs.Screen
+          name="ProviderReviewsScreen"
+          options={{
+            href: null,
+          }}
+        />
       </Tabs>
     </CustomerProvider>
   );

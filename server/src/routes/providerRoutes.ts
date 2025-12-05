@@ -1,6 +1,7 @@
 import express from "express";
 import { authenticateUser, AuthRequest } from "../middleware/authMiddleware";
 import Provider from "../models/Provider";
+import Review from "../models/Review";
 import User from "../models/User";
 
 const router = express.Router();
@@ -38,7 +39,6 @@ router.post("/register", authenticateUser, async (req: AuthRequest, res) => {
       });
     }
 
-    // Validate required fields
     if (
       !name ||
       !email ||
@@ -55,14 +55,12 @@ router.post("/register", authenticateUser, async (req: AuthRequest, res) => {
       });
     }
 
-    // Update or create User document
     await User.findOneAndUpdate(
       { userId },
       { userId, email, userType: "provider" },
       { upsert: true, new: true }
     );
 
-    // Create provider with all data from request
     const provider = new Provider({
       userId,
       name,
@@ -95,6 +93,80 @@ router.post("/register", authenticateUser, async (req: AuthRequest, res) => {
   }
 });
 
+router.get("/:providerId/reviews", async (req, res) => {
+  try {
+    const { providerId } = req.params;
+    const { limit = "20", skip = "0", sort = "-createdAt" } = req.query;
+
+    const reviews = await Review.find({ providerId })
+      .sort(sort as string)
+      .limit(parseInt(limit as string))
+      .skip(parseInt(skip as string));
+
+    const total = await Review.countDocuments({ providerId });
+
+    const ratingBreakdown = await Review.aggregate([
+      { $match: { providerId } },
+      {
+        $group: {
+          _id: "$rating",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const breakdown = {
+      5: 0,
+      4: 0,
+      3: 0,
+      2: 0,
+      1: 0,
+    };
+
+    ratingBreakdown.forEach((item) => {
+      breakdown[item._id as keyof typeof breakdown] = item.count;
+    });
+
+    res.json({
+      success: true,
+      data: {
+        reviews,
+        total,
+        breakdown,
+      },
+    });
+  } catch (error: any) {
+    console.error("Get reviews error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all providers (search/filter)
+router.get("/", authenticateUser, async (req: AuthRequest, res) => {
+  try {
+    const { service, city } = req.query;
+
+    let query: any = { isActive: true };
+
+    if (service) {
+      query.$or = [{ services: service }, { customServices: service }];
+    }
+
+    if (city) {
+      query["location.city"] = city;
+    }
+
+    const providers = await Provider.find(query).sort({ rating: -1 });
+    res.json(providers);
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// Get single provider by userId
 router.get("/:userId", authenticateUser, async (req: AuthRequest, res) => {
   try {
     const provider = await Provider.findOne({ userId: req.params.userId });
@@ -181,30 +253,6 @@ router.delete("/:userId", authenticateUser, async (req: AuthRequest, res) => {
       success: true,
       message: "Provider account deactivated",
     });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
-  }
-});
-
-router.get("/", authenticateUser, async (req: AuthRequest, res) => {
-  try {
-    const { service, city } = req.query;
-
-    let query: any = { isActive: true };
-
-    if (service) {
-      query.$or = [{ services: service }, { customServices: service }];
-    }
-
-    if (city) {
-      query["location.city"] = city;
-    }
-
-    const providers = await Provider.find(query).sort({ rating: -1 });
-    res.json(providers);
   } catch (error: any) {
     res.status(500).json({
       success: false,
