@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
   Image,
   Linking,
@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { createBooking } from "../services/apiService";
+import { createBooking, getProviderReviews } from "../services/apiService";
 import { createConversation } from "../services/messageService";
 
 const ProviderDetailsScreen = () => {
@@ -40,7 +40,6 @@ const ProviderDetailsScreen = () => {
   const specialtiesArray = specialties ? JSON.parse(specialties as string) : [];
   const locationData = location ? JSON.parse(location as string) : null;
 
-  // Normalize service to a string for safe usage (params may provide string or string[])
   const serviceText =
     typeof service === "string"
       ? service
@@ -48,19 +47,54 @@ const ProviderDetailsScreen = () => {
       ? service.join(", ")
       : "";
 
-  const [showBookingModal, setShowBookingModal] = React.useState(false);
-  const [selectedDate, setSelectedDate] = React.useState("");
-  const [selectedTime, setSelectedTime] = React.useState("");
-  const [address, setAddress] = React.useState("");
-  const [notes, setNotes] = React.useState("");
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
+  const [reviewsData, setReviewsData] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
 
-  const availableDates = [
-    "Oct 10, 2025",
-    "Oct 11, 2025",
-    "Oct 12, 2025",
-    "Oct 13, 2025",
-    "Oct 14, 2025",
-  ];
+  const availableDates = useMemo(() => {
+    const dates = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 10; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+
+      const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "short" });
+
+      const monthDay = date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+
+      let displayLabel;
+      if (i === 0) {
+        displayLabel = `Today, ${monthDay}`;
+      } else if (i === 1) {
+        displayLabel = `Tomorrow, ${monthDay}`;
+      } else {
+        displayLabel = `${dayOfWeek}, ${monthDay}`;
+      }
+
+      const fullDate = date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+
+      dates.push({
+        display: displayLabel,
+        value: fullDate,
+        date: date,
+      });
+    }
+
+    return dates;
+  }, []);
 
   const availableTimes = [
     "9:00 AM - 11:00 AM",
@@ -68,6 +102,30 @@ const ProviderDetailsScreen = () => {
     "2:00 PM - 4:00 PM",
     "4:00 PM - 6:00 PM",
   ];
+
+  React.useEffect(() => {
+    const fetchReviews = async () => {
+      if (!userId) return;
+
+      try {
+        setLoadingReviews(true);
+        const response = await getProviderReviews(userId as string);
+
+        const reviewsArray = Array.isArray(response?.data?.data?.reviews)
+          ? response.data.data.reviews
+          : [];
+
+        setReviewsData(reviewsArray.slice(0, 3));
+      } catch (error) {
+        console.error("Error fetching reviews:", error);
+        setReviewsData([]);
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+
+    fetchReviews();
+  }, [userId]);
 
   const handleBookNow = async () => {
     if (!selectedDate || !selectedTime || !address) {
@@ -124,14 +182,9 @@ const ProviderDetailsScreen = () => {
 
   const handleMessage = async () => {
     try {
-      console.log("Creating conversation with provider:", userId);
-
       const response = await createConversation(userId as string);
 
-      console.log("Conversation response:", response);
-
       if (response.success && response.data) {
-        // The API returns { conversationId, ...conversation }
         const conversationId =
           response.data.conversationId || response.data._id;
 
@@ -140,7 +193,6 @@ const ProviderDetailsScreen = () => {
           return;
         }
 
-        // Navigate to chat screen
         router.push({
           pathname: "/customer/ChatScreen",
           params: {
@@ -314,40 +366,55 @@ const ProviderDetailsScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {[1, 2].map((item) => (
-            <View key={item} className="mb-4 pb-4 border-b border-gray-100">
-              <View className="flex-row items-center mb-2">
-                <Image
-                  source={{ uri: `https://i.pravatar.cc/150?img=${item + 20}` }}
-                  className="w-10 h-10 rounded-full"
-                />
-                <View className="flex-1 ml-3">
-                  <Text className="font-semibold text-gray-800">
-                    Customer {item}
-                  </Text>
-                  <View className="flex-row items-center">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Ionicons
-                        key={star}
-                        name="star"
-                        size={12}
-                        color="#fbbf24"
-                      />
-                    ))}
+          {loadingReviews ? (
+            <Text className="text-gray-500 text-center py-4">
+              Loading reviews...
+            </Text>
+          ) : reviewsData.length === 0 ? (
+            <Text className="text-gray-500 text-center py-4">
+              No reviews available
+            </Text>
+          ) : (
+            reviewsData.map((review, index) => (
+              <View key={index} className="mb-4 pb-4 border-b border-gray-100">
+                <View className="flex-row items-center mb-2">
+                  <Image
+                    source={{
+                      uri:
+                        review.userPhoto ||
+                        `https://i.pravatar.cc/150?img=${index + 20}`,
+                    }}
+                    className="w-10 h-10 rounded-full"
+                  />
+                  <View className="flex-1 ml-3">
+                    <Text className="font-semibold text-gray-800">
+                      {review.userName || `Customer ${index + 1}`}
+                    </Text>
+                    <View className="flex-row items-center">
+                      {[...Array(5)].map((_, starIndex) => (
+                        <Ionicons
+                          key={starIndex}
+                          name="star"
+                          size={12}
+                          color={
+                            starIndex < review.rating ? "#fbbf24" : "#d1d5db"
+                          }
+                        />
+                      ))}
+                    </View>
                   </View>
+                  <Text className="text-xs text-gray-500">
+                    {review.timeAgo || "2 days ago"}
+                  </Text>
                 </View>
-                <Text className="text-xs text-gray-500">2 days ago</Text>
+                <Text className="text-sm text-gray-600">{review.comment}</Text>
               </View>
-              <Text className="text-sm text-gray-600">
-                Excellent service! Very professional and completed the work on
-                time. Highly recommended!
-              </Text>
-            </View>
-          ))}
+            ))
+          )}
         </View>
       </ScrollView>
 
-      {/* Book Now Button - REMOVED THE DUPLICATE MESSAGE BUTTON */}
+      {/* Book Now Button */}
       <View className="bg-white px-6 py-4 border-t border-gray-200">
         <TouchableOpacity
           onPress={() => setShowBookingModal(true)}
@@ -386,22 +453,24 @@ const ProviderDetailsScreen = () => {
                 showsHorizontalScrollIndicator={false}
                 className="mb-6"
               >
-                {availableDates.map((date) => (
+                {availableDates.map((dateObj) => (
                   <TouchableOpacity
-                    key={date}
-                    onPress={() => setSelectedDate(date)}
+                    key={dateObj.value}
+                    onPress={() => setSelectedDate(dateObj.value)}
                     className={`mr-3 px-4 py-3 rounded-xl border ${
-                      selectedDate === date
+                      selectedDate === dateObj.value
                         ? "bg-blue-600 border-blue-600"
                         : "bg-white border-gray-200"
                     }`}
                   >
                     <Text
                       className={`font-medium ${
-                        selectedDate === date ? "text-white" : "text-gray-700"
+                        selectedDate === dateObj.value
+                          ? "text-white"
+                          : "text-gray-700"
                       }`}
                     >
-                      {date}
+                      {dateObj.display}
                     </Text>
                   </TouchableOpacity>
                 ))}
