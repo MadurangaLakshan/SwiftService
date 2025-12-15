@@ -2,6 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   Linking,
   Modal,
@@ -13,6 +15,12 @@ import {
 } from "react-native";
 import { createBooking, getProviderReviews } from "../services/apiService";
 import { createConversation } from "../services/messageService";
+import {
+  convertImageToBase64,
+  pickMultipleImages,
+  showImagePickerOptions,
+  takePhoto,
+} from "../utils/imageConverter";
 
 const ProviderDetailsScreen = () => {
   const params = useLocalSearchParams();
@@ -52,8 +60,10 @@ const ProviderDetailsScreen = () => {
   const [selectedTime, setSelectedTime] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
+  const [attachedPhotos, setAttachedPhotos] = useState<string[]>([]);
   const [reviewsData, setReviewsData] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
   const availableDates = useMemo(() => {
     const dates = [];
@@ -127,6 +137,71 @@ const ProviderDetailsScreen = () => {
     fetchReviews();
   }, [userId]);
 
+  const pickImages = async () => {
+    if (attachedPhotos.length >= 5) {
+      Alert.alert("Limit Reached", "You can only attach up to 5 photos.");
+      return;
+    }
+
+    try {
+      setUploadingPhotos(true);
+
+      const maxToSelect = 5 - attachedPhotos.length;
+      const imageUris = await pickMultipleImages(maxToSelect);
+
+      if (imageUris.length > 0) {
+        // Convert all selected images to base64
+        const base64Promises = imageUris.map((uri) =>
+          convertImageToBase64(uri)
+        );
+
+        const base64Images = await Promise.all(base64Promises);
+        setAttachedPhotos([...attachedPhotos, ...base64Images]);
+      }
+    } catch (error) {
+      console.error("Error picking images:", error);
+      Alert.alert("Error", "Failed to process images. Please try again.");
+    } finally {
+      setUploadingPhotos(false);
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    if (attachedPhotos.length >= 5) {
+      Alert.alert("Limit Reached", "You can only attach up to 5 photos.");
+      return;
+    }
+
+    try {
+      setUploadingPhotos(true);
+
+      const photoUri = await takePhoto();
+
+      if (photoUri) {
+        const base64Image = await convertImageToBase64(photoUri);
+        setAttachedPhotos([...attachedPhotos, base64Image]);
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
+      Alert.alert("Error", "Failed to process photo. Please try again.");
+    } finally {
+      setUploadingPhotos(false);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setAttachedPhotos(attachedPhotos.filter((_, i) => i !== index));
+  };
+
+  const handleShowPhotoOptions = () => {
+    showImagePickerOptions(
+      pickImages,
+      handleTakePhoto,
+      "Add Photo",
+      "Choose an option"
+    );
+  };
+
   const handleBookNow = async () => {
     if (!selectedDate || !selectedTime || !address) {
       alert("Please fill in all required fields");
@@ -147,6 +222,7 @@ const ProviderDetailsScreen = () => {
         additionalNotes: notes,
         hourlyRate: hourlyRate,
         estimatedHours: 1,
+        customerAttachedPhotos: attachedPhotos, // Base64 images
       };
 
       const bookingResult = await createBooking(bookingPayload);
@@ -166,6 +242,12 @@ const ProviderDetailsScreen = () => {
       });
 
       setShowBookingModal(false);
+      // Reset form
+      setSelectedDate("");
+      setSelectedTime("");
+      setAddress("");
+      setNotes("");
+      setAttachedPhotos([]);
     } catch (error: any) {
       console.error("Booking error:", error);
       alert("An unexpected error occurred while creating your booking.");
@@ -514,6 +596,69 @@ const ProviderDetailsScreen = () => {
                 multiline
               />
 
+              {/* Photo Attachments */}
+              <Text className="text-sm font-semibold text-gray-700 mb-3">
+                Attach Photos (Optional)
+              </Text>
+              <Text className="text-xs text-gray-500 mb-3">
+                Share photos of the area or issue to help the provider prepare
+                better (max 5 photos)
+              </Text>
+
+              {attachedPhotos.length > 0 && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  className="mb-3"
+                >
+                  {attachedPhotos.map((photo, index) => (
+                    <View key={index} className="mr-3 relative">
+                      <Image
+                        source={{ uri: photo }}
+                        className="w-24 h-24 rounded-xl"
+                      />
+                      <TouchableOpacity
+                        onPress={() => removePhoto(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 rounded-full w-6 h-6 items-center justify-center"
+                      >
+                        <Ionicons name="close" size={16} color="white" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+
+              {attachedPhotos.length < 5 && (
+                <TouchableOpacity
+                  onPress={handleShowPhotoOptions}
+                  disabled={uploadingPhotos}
+                  className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl py-6 items-center justify-center mb-6"
+                >
+                  {uploadingPhotos ? (
+                    <>
+                      <ActivityIndicator size="large" color="#3b82f6" />
+                      <Text className="text-gray-600 font-medium mt-2">
+                        Processing photos...
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="images-outline"
+                        size={32}
+                        color="#6b7280"
+                      />
+                      <Text className="text-gray-600 font-medium mt-2">
+                        Add Photos
+                      </Text>
+                      <Text className="text-xs text-gray-500 mt-1">
+                        {attachedPhotos.length}/5 photos added
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+
               {/* Additional Notes */}
               <Text className="text-sm font-semibold text-gray-700 mb-3">
                 Additional Notes (Optional)
@@ -559,10 +704,21 @@ const ProviderDetailsScreen = () => {
                   </View>
                 )}
                 {selectedTime && (
-                  <View className="flex-row justify-between">
+                  <View className="flex-row justify-between mb-1">
                     <Text className="text-sm text-gray-600">Time</Text>
                     <Text className="text-sm font-medium text-gray-800">
                       {selectedTime}
+                    </Text>
+                  </View>
+                )}
+                {attachedPhotos.length > 0 && (
+                  <View className="flex-row justify-between">
+                    <Text className="text-sm text-gray-600">
+                      Photos Attached
+                    </Text>
+                    <Text className="text-sm font-medium text-gray-800">
+                      {attachedPhotos.length} photo
+                      {attachedPhotos.length > 1 ? "s" : ""}
                     </Text>
                   </View>
                 )}

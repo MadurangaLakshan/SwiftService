@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Image,
   Keyboard,
   Modal,
@@ -62,6 +63,7 @@ interface Booking {
   };
   serviceAddress: string;
   additionalNotes?: string;
+  customerAttachedPhotos?: string[];
   timeline?: {
     bookedAt: string;
     confirmedAt?: string;
@@ -92,6 +94,9 @@ const BookingDetailsScreen = () => {
   const [workNotes, setWorkNotes] = useState("");
   const [beforePhotos, setBeforePhotos] = useState<string[]>([]);
   const [afterPhotos, setAfterPhotos] = useState<string[]>([]);
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [viewerImages, setViewerImages] = useState<string[]>([]);
 
   useEffect(() => {
     if (bookingId) {
@@ -116,6 +121,12 @@ const BookingDetailsScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewImage = (images: string[], index: number) => {
+    setViewerImages(images);
+    setSelectedImageIndex(index);
+    setShowImageViewer(true);
   };
 
   const handleStatusUpdate = async (newStatus: BookingStatus) => {
@@ -591,6 +602,83 @@ const BookingDetailsScreen = () => {
             )}
           </View>
         </View>
+
+        {/* Customer Attached Photos */}
+        {booking.customerAttachedPhotos &&
+          booking.customerAttachedPhotos.length > 0 && (
+            <View className="mx-6 mt-4 bg-white rounded-2xl p-4 border border-gray-200">
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-sm font-semibold text-gray-500">
+                  CUSTOMER ATTACHED PHOTOS
+                </Text>
+                <View className="bg-blue-100 px-2 py-1 rounded-full">
+                  <Text className="text-xs font-semibold text-blue-700">
+                    {booking.customerAttachedPhotos.length} photo
+                    {booking.customerAttachedPhotos.length > 1 ? "s" : ""}
+                  </Text>
+                </View>
+              </View>
+
+              <View className="bg-blue-50 rounded-lg p-3 mb-3">
+                <View className="flex-row items-start">
+                  <Ionicons
+                    name="information-circle"
+                    size={16}
+                    color="#3b82f6"
+                  />
+                  <Text className="flex-1 ml-2 text-xs text-blue-700">
+                    Photos shared by the customer to help you understand the job
+                    requirements
+                  </Text>
+                </View>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                className="mb-2"
+              >
+                {booking.customerAttachedPhotos.map((photo, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() =>
+                      handleViewImage(booking.customerAttachedPhotos!, index)
+                    }
+                    className="mr-3"
+                    activeOpacity={0.8}
+                  >
+                    <Image
+                      source={{ uri: photo }}
+                      className="w-32 h-32 rounded-xl"
+                      resizeMode="cover"
+                    />
+                    <View className="absolute bottom-2 right-2 bg-black/50 rounded-full px-2 py-1">
+                      <Text className="text-white text-xs font-semibold">
+                        {index + 1}/{booking.customerAttachedPhotos?.length}
+                      </Text>
+                    </View>
+                    {/* Zoom indicator overlay */}
+                    <View className="absolute inset-0 items-center justify-center">
+                      <View className="bg-black/30 rounded-full p-2">
+                        <Ionicons
+                          name="expand-outline"
+                          size={20}
+                          color="white"
+                        />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <View className="flex-row items-center justify-center bg-gray-100 rounded-lg py-2 mt-2">
+                <Ionicons name="hand-left-outline" size={16} color="#6b7280" />
+                <Text className="text-gray-600 text-xs font-medium ml-1">
+                  Tap any photo to view full screen
+                </Text>
+              </View>
+            </View>
+          )}
 
         {/* Work Documentation */}
         {booking.workDocumentation && (
@@ -1155,6 +1243,84 @@ const BookingDetailsScreen = () => {
               <Text className="text-center text-white font-bold">Done</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+      {/* Image Viewer Modal */}
+      <Modal
+        visible={showImageViewer}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowImageViewer(false)}
+      >
+        <View className="flex-1 bg-black">
+          {/* Header */}
+          <View className="absolute top-0 left-0 right-0 z-10 bg-black/80 px-6 pt-12 pb-4">
+            <View className="flex-row items-center justify-between">
+              <TouchableOpacity
+                onPress={() => setShowImageViewer(false)}
+                className="w-10 h-10 items-center justify-center"
+              >
+                <Ionicons name="close" size={28} color="white" />
+              </TouchableOpacity>
+              <Text className="text-white font-semibold">
+                {selectedImageIndex + 1} / {viewerImages.length}
+              </Text>
+              <View className="w-10" />
+            </View>
+          </View>
+
+          {/* Image Display */}
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(event) => {
+              const index = Math.round(
+                event.nativeEvent.contentOffset.x /
+                  event.nativeEvent.layoutMeasurement.width
+              );
+              setSelectedImageIndex(index);
+            }}
+            contentOffset={{
+              x: selectedImageIndex * Dimensions.get("window").width,
+              y: 0,
+            }}
+          >
+            {viewerImages.map((image, index) => (
+              <View
+                key={index}
+                style={{ width: Dimensions.get("window").width }}
+                className="items-center justify-center"
+              >
+                <Image
+                  source={{ uri: image }}
+                  style={{
+                    width: Dimensions.get("window").width,
+                    height: Dimensions.get("window").height,
+                  }}
+                  resizeMode="contain"
+                />
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Navigation Dots */}
+          {viewerImages.length > 1 && (
+            <View className="absolute bottom-10 left-0 right-0">
+              <View className="flex-row justify-center items-center">
+                {viewerImages.map((_, index) => (
+                  <View
+                    key={index}
+                    className={`h-2 rounded-full mx-1 ${
+                      index === selectedImageIndex
+                        ? "w-8 bg-white"
+                        : "w-2 bg-white/50"
+                    }`}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       </Modal>
     </View>

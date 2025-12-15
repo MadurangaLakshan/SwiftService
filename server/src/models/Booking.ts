@@ -9,6 +9,7 @@ export interface IBooking extends Document {
   timeSlot: string;
   serviceAddress: string;
   additionalNotes?: string;
+  customerAttachedPhotos?: string[];
   status:
     | "pending"
     | "confirmed"
@@ -109,6 +110,16 @@ const BookingSchema: Schema = new Schema(
     additionalNotes: {
       type: String,
       maxlength: 500,
+    },
+    customerAttachedPhotos: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function (v: string[]) {
+          return v.length <= 5;
+        },
+        message: "Maximum 5 photos can be attached",
+      },
     },
     status: {
       type: String,

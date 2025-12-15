@@ -19,6 +19,7 @@ router.post("/", authenticateUser, async (req: AuthRequest, res) => {
       additionalNotes,
       hourlyRate,
       estimatedHours,
+      customerAttachedPhotos, // Added: Array of base64 strings
     } = req.body;
 
     const customerId = req.user?.uid;
@@ -44,6 +45,36 @@ router.post("/", authenticateUser, async (req: AuthRequest, res) => {
         success: false,
         error: "Missing required fields",
       });
+    }
+
+    // Validate photos if provided
+    if (customerAttachedPhotos) {
+      if (!Array.isArray(customerAttachedPhotos)) {
+        return res.status(400).json({
+          success: false,
+          error: "customerAttachedPhotos must be an array",
+        });
+      }
+
+      if (customerAttachedPhotos.length > 5) {
+        return res.status(400).json({
+          success: false,
+          error: "Maximum 5 photos allowed",
+        });
+      }
+
+      // Validate base64 format
+      const invalidPhotos = customerAttachedPhotos.filter(
+        (photo: string) =>
+          typeof photo !== "string" || !photo.startsWith("data:image/")
+      );
+
+      if (invalidPhotos.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: "All photos must be valid base64 image strings",
+        });
+      }
     }
 
     // Get customer details
@@ -77,6 +108,7 @@ router.post("/", authenticateUser, async (req: AuthRequest, res) => {
       timeSlot,
       serviceAddress,
       additionalNotes,
+      customerAttachedPhotos: customerAttachedPhotos || [], // Added: Store photos
       status: "pending",
       pricing: {
         hourlyRate,
@@ -326,8 +358,6 @@ router.put(
     }
   }
 );
-
-// Add this endpoint to your bookings router file (after the cancel route)
 
 // Approve booking completion (customer only)
 router.put(
