@@ -463,15 +463,16 @@ const ProviderDetailsScreen = () => {
                   <Image
                     source={{
                       uri:
-                        review.userPhoto ||
+                        review.customerPhoto ||
                         `https://i.pravatar.cc/150?img=${index + 20}`,
                     }}
                     className="w-10 h-10 rounded-full"
                   />
                   <View className="flex-1 ml-3">
                     <Text className="font-semibold text-gray-800">
-                      {review.userName || `Customer ${index + 1}`}
+                      {review.customerName || `Customer ${index + 1}`}
                     </Text>
+                    <Text>{review.userEmail}</Text>
                     <View className="flex-row items-center">
                       {[...Array(5)].map((_, starIndex) => (
                         <Ionicons

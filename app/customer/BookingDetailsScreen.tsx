@@ -57,6 +57,7 @@ interface Booking {
     name: string;
     phone: string;
     email: string;
+    image: string;
   };
   providerDetails: {
     name: string;
@@ -219,11 +220,14 @@ const BookingDetailsScreen = () => {
       return;
     }
 
+    const customerPhoto = booking?.customerDetails.image || undefined;
+
     try {
       setActionLoading(true);
       const response = await submitBookingReview(bookingId as string, {
         rating,
         review: reviewText,
+        customerPhoto,
       });
 
       if (response.success) {

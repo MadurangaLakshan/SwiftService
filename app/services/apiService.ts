@@ -315,6 +315,7 @@ export const submitBookingReview = async (
   reviewData: {
     rating: number;
     review?: string;
+    customerPhoto?: string;
   }
 ) => {
   return authenticatedRequest(`/bookings/${bookingId}/review`, {
