@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
+import { router, Stack, useFocusEffect } from "expo-router";
 import React, { useCallback } from "react";
 import {
   ActivityIndicator,
@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import { auth } from "../config/firebase";
 import { useMessageStore } from "../store/messageStore";
 
@@ -161,6 +162,7 @@ const MessagesScreen = () => {
   return (
     <View className="flex-1 bg-gray-50">
       {/* Header */}
+      <Stack.Screen options={{ headerShown: false }} />
       <View className="bg-white px-6 pt-12 pb-4 border-b border-gray-200">
         <View className="flex-row items-center justify-between">
           <Text className="text-2xl font-bold text-gray-800">Messages</Text>

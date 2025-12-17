@@ -472,7 +472,8 @@ const ProviderDetailsScreen = () => {
                     <Text className="font-semibold text-gray-800">
                       {review.customerName || `Customer ${index + 1}`}
                     </Text>
-                    <Text>{review.userEmail}</Text>
+                    <Text>{review.review}</Text>
+
                     <View className="flex-row items-center">
                       {[...Array(5)].map((_, starIndex) => (
                         <Ionicons
