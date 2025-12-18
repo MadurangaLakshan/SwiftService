@@ -1,44 +1,95 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import {
+  getNotifications,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
+} from "../services/notificationService";
+
+interface Notification {
+  _id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: "booking" | "message" | "service" | "payment" | "review" | "general";
+  relatedId?: string;
+  read: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const NotificationsScreen = () => {
-  const notifications = [
-    {
-      id: 1,
-      title: "Booking Confirmed",
-      message:
-        "Your booking with John Silva has been confirmed for tomorrow at 2 PM",
-      time: "2 hours ago",
-      read: false,
-      type: "booking",
-    },
-    {
-      id: 2,
-      title: "New Message",
-      message: "Sarah Perera sent you a message",
-      time: "5 hours ago",
-      read: false,
-      type: "message",
-    },
-    {
-      id: 3,
-      title: "Service Completed",
-      message: "Mike Fernando has completed your service request",
-      time: "1 day ago",
-      read: true,
-      type: "service",
-    },
-    {
-      id: 4,
-      title: "Payment Successful",
-      message: "Your payment of $50 has been processed",
-      time: "2 days ago",
-      read: true,
-      type: "payment",
-    },
-  ];
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const loadNotifications = async () => {
+    try {
+      const response = await getNotifications();
+      if (response.success) {
+        setNotifications(response.data.data);
+      }
+    } catch (error) {
+      console.error("Error loading notifications:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadNotifications();
+    setRefreshing(false);
+  };
+
+  const handleNotificationPress = async (notification: Notification) => {
+    // Mark as read if unread
+    if (!notification.read) {
+      await markNotificationAsRead(notification._id);
+      // Update local state
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === notification._id ? { ...n, read: true } : n))
+      );
+    }
+
+    // Navigate based on notification type
+    if (notification.type === "booking" && notification.relatedId) {
+      router.push({
+        pathname: "/customer/BookingDetailsScreen",
+        params: { bookingId: notification.relatedId },
+      });
+    } else if (notification.type === "message" && notification.relatedId) {
+      router.push({
+        pathname: "/customer/ChatScreen",
+        params: { id: notification.relatedId },
+      });
+    } else if (notification.type === "review" && notification.relatedId) {
+      router.push({
+        pathname: "/customer/ProviderDetailsScreen",
+        params: { id: notification.relatedId },
+      });
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    const response = await markAllNotificationsAsRead();
+    if (response.success) {
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    }
+  };
 
   const getIconName = (type: string) => {
     switch (type) {
@@ -50,10 +101,39 @@ const NotificationsScreen = () => {
         return "checkmark-circle";
       case "payment":
         return "card";
+      case "review":
+        return "star";
       default:
         return "notifications";
     }
   };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInMinutes = Math.floor(diffInMs / 60000);
+    const diffInHours = Math.floor(diffInMs / 3600000);
+    const diffInDays = Math.floor(diffInMs / 86400000);
+
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes} minute${diffInMinutes !== 1 ? "s" : ""} ago`;
+    } else if (diffInHours < 24) {
+      return `${diffInHours} hour${diffInHours !== 1 ? "s" : ""} ago`;
+    } else if (diffInDays < 7) {
+      return `${diffInDays} day${diffInDays !== 1 ? "s" : ""} ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#3b82f6" />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-white">
@@ -64,20 +144,27 @@ const NotificationsScreen = () => {
             <Ionicons name="arrow-back" size={24} color="black" />
           </TouchableOpacity>
           <Text className="text-xl font-bold text-gray-800">Notifications</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleMarkAllRead}>
             <Text className="text-blue-600 font-medium">Mark all read</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Notifications List */}
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {notifications.map((notification) => (
           <TouchableOpacity
-            key={notification.id}
+            key={notification._id}
             className={`px-6 py-4 border-b border-gray-100 ${
               !notification.read ? "bg-blue-50" : "bg-white"
             }`}
+            onPress={() => handleNotificationPress(notification)}
           >
             <View className="flex-row">
               <View
@@ -105,7 +192,7 @@ const NotificationsScreen = () => {
                   {notification.message}
                 </Text>
                 <Text className="text-xs text-gray-400">
-                  {notification.time}
+                  {formatTime(notification.createdAt)}
                 </Text>
               </View>
             </View>

@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { useCustomer } from "../context/CustomerContext";
 import { getAllProviders } from "../services/apiService";
+import { getUnreadCount } from "../services/notificationService";
 
 interface Provider {
   _id: string;
@@ -44,6 +45,60 @@ interface Provider {
   isActive: boolean;
   profilePhoto?: string;
 }
+
+const NotificationIconWithBadge = ({ color }: { color: string }) => {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    loadUnreadCount();
+
+    // Refresh every 30 seconds
+    const interval = setInterval(loadUnreadCount, 3000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
+
+  const loadUnreadCount = async () => {
+    try {
+      const response = await getUnreadCount();
+      if (response.success && response.data?.data?.count !== undefined) {
+        setUnreadCount(response.data.data.count);
+      }
+    } catch (error) {
+      console.error("Error loading unread count:", error);
+    }
+  };
+
+  return (
+    <View style={{ width: 26, height: 26, position: "relative" }}>
+      <Ionicons name="notifications-outline" size={26} color={color} />
+      {unreadCount > 0 && (
+        <View
+          style={{
+            position: "absolute",
+            top: -4,
+            right: -8,
+            backgroundColor: "#ef4444",
+            borderRadius: 10,
+            minWidth: 18,
+            height: 18,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 4,
+            borderWidth: 2,
+            borderColor: "white",
+          }}
+        >
+          <Text style={{ color: "white", fontSize: 10, fontWeight: "bold" }}>
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
 
 const HomeScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -159,11 +214,7 @@ const HomeScreen = () => {
                 <TouchableOpacity
                   onPress={() => router.push("../customer/NotificationScreen")}
                 >
-                  <Ionicons
-                    name="notifications-outline"
-                    size={28}
-                    color="black"
-                  />
+                  <NotificationIconWithBadge color="black" />
                 </TouchableOpacity>
               </View>
 

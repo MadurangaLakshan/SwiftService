@@ -33,7 +33,7 @@ export default function RegisterScreen() {
         <View className="flex-1 justify-center items-center bg-white p-6">
           <View className="flex-row items-center gap-2">
             <Image
-              source={require("../assets/images/SwiftService.png")}
+              source={require("../../assets/images/SwiftService.png")}
               className="w-32 h-32 mb-6"
             />
             <Text className="text-4xl font-bold pb-4">
@@ -43,7 +43,7 @@ export default function RegisterScreen() {
           </View>
           <Text className="text-3xl font-bold mb-6">Register</Text>
           <Image
-            source={require("../assets/images/Register.png")}
+            source={require("../../assets/images/Register.png")}
             className="w-64 h-64 mb-12"
           />
           <TextInput

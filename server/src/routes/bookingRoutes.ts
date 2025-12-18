@@ -2,6 +2,7 @@ import express from "express";
 import { authenticateUser, AuthRequest } from "../middleware/authMiddleware";
 import Booking from "../models/Booking";
 import Customer from "../models/Customer";
+import Notification from "../models/Notification"; // Add this import
 import Provider from "../models/Provider";
 
 const router = express.Router();
@@ -19,7 +20,7 @@ router.post("/", authenticateUser, async (req: AuthRequest, res) => {
       additionalNotes,
       hourlyRate,
       estimatedHours,
-      customerAttachedPhotos, // Added: Array of base64 strings
+      customerAttachedPhotos,
     } = req.body;
 
     const customerId = req.user?.uid;
@@ -135,6 +136,24 @@ router.post("/", authenticateUser, async (req: AuthRequest, res) => {
 
     await booking.save();
     console.log("booking saved");
+
+    // CREATE NOTIFICATION FOR PROVIDER
+    try {
+      await Notification.create({
+        userId: providerId,
+        title: "New Booking Request",
+        message: `${
+          customer.name
+        } has requested a ${serviceType} booking for ${new Date(
+          scheduledDate
+        ).toLocaleDateString()} at ${timeSlot}`,
+        type: "booking",
+        relatedId: booking._id.toString(),
+        read: false,
+      });
+    } catch (notifError) {
+      console.error("Failed to create notification:", notifError);
+    }
 
     res.status(201).json({
       success: true,
@@ -282,6 +301,7 @@ router.put(
         });
       }
 
+      const oldStatus = booking.status;
       booking.status = status;
 
       if (status === "completed") {
@@ -289,6 +309,49 @@ router.put(
       }
 
       await booking.save();
+
+      // CREATE NOTIFICATIONS FOR STATUS CHANGES
+      try {
+        const isProvider = booking.providerId === req.user?.uid;
+        const notifyUserId = isProvider
+          ? booking.customerId
+          : booking.providerId;
+        const notifyUserName = isProvider
+          ? booking.providerDetails.name
+          : booking.customerDetails.name;
+
+        let notificationTitle = "Booking Status Updated";
+        let notificationMessage = "";
+
+        if (status === "confirmed") {
+          notificationTitle = "Booking Confirmed";
+          notificationMessage = `Your booking with ${notifyUserName} has been confirmed for ${new Date(
+            booking.scheduledDate
+          ).toLocaleDateString()} at ${booking.timeSlot}`;
+        } else if (status === "in-progress") {
+          notificationTitle = "Service Started";
+          notificationMessage = `${notifyUserName} has started your service`;
+        } else if (status === "awaiting-customer-approval") {
+          notificationTitle = "Service Awaiting Approval";
+          notificationMessage = `${notifyUserName} has marked the service as complete. Please review and approve`;
+        } else if (status === "completed") {
+          notificationTitle = "Service Completed";
+          notificationMessage = `Your booking with ${notifyUserName} has been completed`;
+        } else {
+          notificationMessage = `Your booking status has been updated to ${status}`;
+        }
+
+        await Notification.create({
+          userId: notifyUserId,
+          title: notificationTitle,
+          message: notificationMessage,
+          type: status === "completed" ? "service" : "booking",
+          relatedId: booking._id.toString(),
+          read: false,
+        });
+      } catch (notifError) {
+        console.error("Failed to create notification:", notifError);
+      }
 
       res.json({
         success: true,
@@ -343,6 +406,30 @@ router.put(
       booking.cancelledAt = new Date();
 
       await booking.save();
+
+      // CREATE NOTIFICATION FOR CANCELLATION
+      try {
+        const isCustomer = cancelledBy === "customer";
+        const notifyUserId = isCustomer
+          ? booking.providerId
+          : booking.customerId;
+        const cancellerName = isCustomer
+          ? booking.customerDetails.name
+          : booking.providerDetails.name;
+
+        await Notification.create({
+          userId: notifyUserId,
+          title: "Booking Cancelled",
+          message: `${cancellerName} has cancelled the booking${
+            reason ? `: ${reason}` : ""
+          }`,
+          type: "booking",
+          relatedId: booking._id.toString(),
+          read: false,
+        });
+      } catch (notifError) {
+        console.error("Failed to create notification:", notifError);
+      }
 
       res.json({
         success: true,
@@ -402,6 +489,20 @@ router.put(
       booking.timeline.customerApprovedAt = new Date();
 
       await booking.save();
+
+      // CREATE NOTIFICATION FOR PROVIDER
+      try {
+        await Notification.create({
+          userId: booking.providerId,
+          title: "Service Approved",
+          message: `${booking.customerDetails.name} has approved the completion of the service`,
+          type: "service",
+          relatedId: booking._id.toString(),
+          read: false,
+        });
+      } catch (notifError) {
+        console.error("Failed to create notification:", notifError);
+      }
 
       res.json({
         success: true,
@@ -473,6 +574,20 @@ router.put(
       };
 
       await booking.save();
+
+      //  CREATE NOTIFICATION FOR PROVIDER ABOUT DISPUTE
+      try {
+        await Notification.create({
+          userId: booking.providerId,
+          title: "Booking Disputed",
+          message: `${booking.customerDetails.name} has raised a dispute for the booking`,
+          type: "booking",
+          relatedId: booking._id.toString(),
+          read: false,
+        });
+      } catch (notifError) {
+        console.error("Failed to create notification:", notifError);
+      }
 
       res.json({
         success: true,
@@ -559,6 +674,20 @@ router.put(
         );
         provider.rating = totalRating / allBookings.length;
         await provider.save();
+      }
+
+      // 🆕 CREATE NOTIFICATION FOR PROVIDER ABOUT NEW REVIEW
+      try {
+        await Notification.create({
+          userId: booking.providerId,
+          title: "New Review",
+          message: `${booking.customerDetails.name} left you a ${rating}-star review`,
+          type: "review",
+          relatedId: booking._id.toString(),
+          read: false,
+        });
+      } catch (notifError) {
+        console.error("Failed to create notification:", notifError);
       }
 
       res.json({

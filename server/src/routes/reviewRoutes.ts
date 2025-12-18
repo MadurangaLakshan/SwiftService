@@ -1,6 +1,7 @@
 import express, { Response } from "express";
 import { authenticateUser, AuthRequest } from "../middleware/authMiddleware";
 import Booking from "../models/Booking";
+import Notification from "../models/Notification"; // Add this import
 import Provider from "../models/Provider";
 import Review from "../models/Review";
 
@@ -66,6 +67,19 @@ router.post(
         provider.rating = totalRating / reviews.length;
         provider.totalReviews = reviews.length;
         await provider.save();
+      }
+
+      try {
+        await Notification.create({
+          userId: booking.providerId,
+          title: "New Review",
+          message: `${booking.customerDetails.name} left you a ${rating}-star review`,
+          type: "review",
+          relatedId: newReview._id.toString(),
+          read: false,
+        });
+      } catch (notifError) {
+        console.error("Failed to create notification:", notifError);
       }
 
       res.json({
@@ -160,6 +174,21 @@ router.post(
       };
 
       await review.save();
+
+      try {
+        const provider = await Provider.findOne({ userId });
+
+        await Notification.create({
+          userId: review.customerId,
+          title: "Review Response",
+          message: `${provider?.name || "Provider"} responded to your review`,
+          type: "review",
+          relatedId: review._id.toString(),
+          read: false,
+        });
+      } catch (notifError) {
+        console.error("Failed to create notification:", notifError);
+      }
 
       res.json({
         success: true,

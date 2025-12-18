@@ -11,7 +11,7 @@ const RegisterOptions = () => {
     <View className="flex-1 justify-center items-center bg-white p-6">
       <View className="flex-row items-center gap-2 mb-12">
         <Image
-          source={require("../assets/images/SwiftService.png")}
+          source={require("../../assets/images/SwiftService.png")}
           className="w-32 h-32"
         />
         <Text className="text-4xl font-bold">
@@ -21,7 +21,7 @@ const RegisterOptions = () => {
       </View>
 
       <Image
-        source={require("../assets/images/Register.png")}
+        source={require("../../assets/images/Register.png")}
         className="w-64 h-64 mb-12"
       />
 

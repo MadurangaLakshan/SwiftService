@@ -8,6 +8,7 @@ import { authenticateSocket } from "./middleware/socketAuthMiddleware";
 import bookingRoutes from "./routes/bookingRoutes";
 import customerRoutes from "./routes/customerRoutes";
 import messageRoutes from "./routes/messageRoute";
+import notificationRoutes from "./routes/notificationRoutes";
 import providerRoutes from "./routes/providerRoutes";
 import reviewRoutes from "./routes/reviewRoutes";
 import userRoutes from "./routes/userRoutes";
@@ -48,6 +49,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api", reviewRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "OK", message: "Server is running" });
