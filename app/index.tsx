@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
 export default function Index() {
@@ -6,6 +7,7 @@ export default function Index() {
 
   return (
     <View className="flex-1 justify-center items-center bg-white p-6">
+      <StatusBar style="dark" />
       <View className="flex-row items-center gap-2">
         <Image
           source={require("../assets/images/SwiftService.png")}
