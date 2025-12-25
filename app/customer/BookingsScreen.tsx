@@ -21,7 +21,7 @@ type BookingStatus =
   | "completed"
   | "cancelled";
 
-type TabStatus = "all" | "pending" | "confirmed" | "completed";
+type TabStatus = "all" | "pending" | "confirmed" | "completed" | "cancelled";
 
 interface Booking {
   _id: string;
@@ -302,6 +302,7 @@ const BookingsScreen = () => {
             { key: "pending", label: "Pending" },
             { key: "confirmed", label: "Confirmed" },
             { key: "completed", label: "Completed" },
+            { key: "cancelled", label: "Cancelled" },
           ].map((tab) => (
             <TouchableOpacity
               key={tab.key}
