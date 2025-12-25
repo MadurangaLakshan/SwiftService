@@ -35,9 +35,14 @@ const MessagesScreen = () => {
   const { conversations, loading, fetchConversations, markConversationAsRead } =
     useMessageStore();
 
+  const flatListRef = React.useRef<FlatList>(null);
+
   useFocusEffect(
     useCallback(() => {
       fetchConversations();
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+      }, 0);
       return () => {};
     }, [])
   );
@@ -172,6 +177,7 @@ const MessagesScreen = () => {
 
       {/* Conversations List */}
       <FlatList
+        ref={flatListRef}
         data={conversations}
         renderItem={renderConversation}
         keyExtractor={(item) => item._id}

@@ -36,9 +36,14 @@ const MessagesScreen = () => {
   const { conversations, loading, fetchConversations, markConversationAsRead } =
     useMessageStore();
 
+  const flatListRef = React.useRef<FlatList>(null);
+
   useFocusEffect(
     useCallback(() => {
       fetchConversations();
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+      }, 0);
       return () => {};
     }, [])
   );
@@ -166,6 +171,7 @@ const MessagesScreen = () => {
       <View className="bg-white px-6 pt-12 pb-4 border-b border-gray-200">
         <View className="flex-row items-center justify-between">
           <Text className="text-2xl font-bold text-gray-800">Messages</Text>
+
           <TouchableOpacity>
             <Ionicons name="create-outline" size={24} color="#3b82f6" />
           </TouchableOpacity>
@@ -174,6 +180,7 @@ const MessagesScreen = () => {
 
       {/* Conversations List */}
       <FlatList
+        ref={flatListRef}
         data={conversations}
         renderItem={renderConversation}
         keyExtractor={(item) => item._id}
