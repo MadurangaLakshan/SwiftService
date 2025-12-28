@@ -158,6 +158,12 @@ export default function CustomerLayout() {
             href: null,
           }}
         />
+        <Tabs.Screen
+          name="LocationFilterModal"
+          options={{
+            href: null,
+          }}
+        />
       </Tabs>
     </CustomerProvider>
   );

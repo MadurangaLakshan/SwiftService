@@ -16,8 +16,15 @@ import {
   View,
 } from "react-native";
 import { useCustomer } from "../context/CustomerContext";
+import LocationFilterModal, {
+  FilterOptions,
+} from "../customer/LocationFilterModal";
 import { getAllProviders } from "../services/apiService";
 import { getUnreadCount } from "../services/notificationService";
+import {
+  filterProvidersByDistance,
+  getDistanceString,
+} from "../utils/locationUtils";
 
 interface Provider {
   _id: string;
@@ -44,6 +51,7 @@ interface Provider {
   verified: boolean;
   isActive: boolean;
   profilePhoto?: string;
+  distance?: number; // Added for location filtering
 }
 
 const NotificationIconWithBadge = ({ color }: { color: string }) => {
@@ -51,13 +59,8 @@ const NotificationIconWithBadge = ({ color }: { color: string }) => {
 
   useEffect(() => {
     loadUnreadCount();
-
-    // Refresh every 30 seconds
     const interval = setInterval(loadUnreadCount, 3000);
-
-    return () => {
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   const loadUnreadCount = async () => {
@@ -104,9 +107,16 @@ const HomeScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [filteredProviders, setFilteredProviders] = useState<Provider[]>([]);
   const [loadingProviders, setLoadingProviders] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { customerData, loading } = useCustomer();
+
+  // Location filter state
+  const [showLocationFilter, setShowLocationFilter] = useState(false);
+  const [activeLocationFilter, setActiveLocationFilter] =
+    useState<FilterOptions | null>(null);
+  const [applyingLocationFilter, setApplyingLocationFilter] = useState(false);
 
   const categories = [
     "All",
@@ -119,10 +129,14 @@ const HomeScreen = () => {
     "Landscaping",
   ];
 
-  // Fetch providers from database
   useEffect(() => {
     fetchProviders();
   }, []);
+
+  // Apply filters whenever dependencies change
+  useEffect(() => {
+    applyFilters();
+  }, [providers, selectedCategory, searchQuery, activeLocationFilter]);
 
   const fetchProviders = async () => {
     try {
@@ -150,27 +164,68 @@ const HomeScreen = () => {
     fetchProviders();
   };
 
-  // Filter providers based on selected category and search query
-  const filteredProviders = providers.filter((provider) => {
-    const matchesCategory =
-      selectedCategory === "All" ||
-      provider.services.includes(selectedCategory) ||
-      provider.customServices.includes(selectedCategory);
+  const applyFilters = async () => {
+    let filtered = [...providers];
 
-    const matchesSearch =
-      searchQuery === "" ||
-      provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      provider.services.some((service) =>
-        service.toLowerCase().includes(searchQuery.toLowerCase())
-      ) ||
-      provider.customServices.some((service) =>
-        service.toLowerCase().includes(searchQuery.toLowerCase())
+    // Category filter
+    if (selectedCategory !== "All") {
+      filtered = filtered.filter(
+        (provider) =>
+          provider.services.includes(selectedCategory) ||
+          provider.customServices.includes(selectedCategory)
       );
+    }
 
-    return matchesCategory && matchesSearch;
-  });
+    // Search filter
+    if (searchQuery !== "") {
+      filtered = filtered.filter(
+        (provider) =>
+          provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          provider.services.some((service) =>
+            service.toLowerCase().includes(searchQuery.toLowerCase())
+          ) ||
+          provider.customServices.some((service) =>
+            service.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+      );
+    }
 
-  // Get primary service for display
+    // Location filter
+    if (activeLocationFilter) {
+      setApplyingLocationFilter(true);
+
+      try {
+        // Map providers to have a flat 'address' property for the filter function
+        const providersWithFlatAddress = filtered.map((provider) => ({
+          ...provider,
+          address: `${provider.location.address}, ${provider.location.city}, ${provider.location.postalCode}`,
+        }));
+
+        const locationFiltered = await filterProvidersByDistance(
+          providersWithFlatAddress,
+          activeLocationFilter.location,
+          activeLocationFilter.radiusKm
+        );
+
+        filtered = locationFiltered;
+      } catch (error) {
+        console.error("Error applying location filter:", error);
+      } finally {
+        setApplyingLocationFilter(false);
+      }
+    }
+
+    setFilteredProviders(filtered);
+  };
+
+  const handleApplyLocationFilter = async (filterOptions: FilterOptions) => {
+    setActiveLocationFilter(filterOptions);
+  };
+
+  const handleClearLocationFilter = () => {
+    setActiveLocationFilter(null);
+  };
+
   const getPrimaryService = (provider: Provider) => {
     if (provider.services.length > 0) {
       return `${provider.services[0]} Services`;
@@ -181,7 +236,6 @@ const HomeScreen = () => {
     return "General Services";
   };
 
-  // Get specialties for display (max 2)
   const getSpecialties = (provider: Provider) => {
     const allServices = [...provider.services, ...provider.customServices];
     return allServices.slice(0, 2);
@@ -218,16 +272,53 @@ const HomeScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              <View className="flex-row items-center bg-gray-100 rounded-2xl px-4 py-3 mb-6">
-                <Ionicons name="search-outline" size={22} color="gray" />
-                <TextInput
-                  placeholder="Search for a service..."
-                  placeholderTextColor="#9ca3af"
-                  className="ml-3 flex-1 text-gray-700 text-base"
-                  returnKeyType="search"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
+              {/* Search Bar with Location Filter Button */}
+              <View className="mb-4">
+                <View className="flex-row items-center bg-gray-100 rounded-2xl px-4 py-3">
+                  <Ionicons name="search-outline" size={22} color="gray" />
+                  <TextInput
+                    placeholder="Search for a service..."
+                    placeholderTextColor="#9ca3af"
+                    className="ml-3 flex-1 text-gray-700 text-base"
+                    returnKeyType="search"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowLocationFilter(true)}
+                    className={`ml-2 p-2 rounded-full ${
+                      activeLocationFilter ? "bg-blue-500" : "bg-gray-200"
+                    }`}
+                  >
+                    <Ionicons
+                      name="location"
+                      size={20}
+                      color={activeLocationFilter ? "white" : "#6b7280"}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Active Location Filter Chip */}
+                {activeLocationFilter && (
+                  <View className="flex-row items-center mt-3 bg-blue-50 p-3 rounded-xl border border-blue-200">
+                    <Ionicons name="location" size={16} color="#3b82f6" />
+                    <Text
+                      className="text-blue-700 text-sm ml-2 flex-1"
+                      numberOfLines={1}
+                    >
+                      Within {activeLocationFilter.radiusKm}km of{" "}
+                      {activeLocationFilter.useCurrentLocation
+                        ? "current location"
+                        : customerData?.location.address || "saved address"}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={handleClearLocationFilter}
+                      className="ml-2"
+                    >
+                      <Ionicons name="close-circle" size={20} color="#3b82f6" />
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
 
               <View className="mb-4">
@@ -276,17 +367,25 @@ const HomeScreen = () => {
                 />
               }
             >
-              <Text className="text-lg font-semibold text-gray-800 mb-4">
-                {selectedCategory === "All"
-                  ? "Available Providers"
-                  : `${selectedCategory} Providers`}
-              </Text>
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-lg font-semibold text-gray-800">
+                  {selectedCategory === "All"
+                    ? "Available Providers"
+                    : `${selectedCategory} Providers`}
+                  {activeLocationFilter && " Nearby"}
+                </Text>
+                <Text className="text-sm text-gray-500">
+                  {filteredProviders.length} found
+                </Text>
+              </View>
 
-              {loadingProviders ? (
+              {loadingProviders || applyingLocationFilter ? (
                 <View className="items-center justify-center py-12">
                   <ActivityIndicator size="large" color="#3b82f6" />
                   <Text className="text-gray-500 text-base mt-4">
-                    Loading providers...
+                    {applyingLocationFilter
+                      ? "Filtering by location..."
+                      : "Loading providers..."}
                   </Text>
                 </View>
               ) : filteredProviders.length > 0 ? (
@@ -353,6 +452,22 @@ const HomeScreen = () => {
                           {getPrimaryService(provider)}
                         </Text>
 
+                        {/* Distance Badge (if location filter active) */}
+                        {provider.distance !== undefined && (
+                          <View className="flex-row items-center mb-2">
+                            <View className="bg-green-50 rounded-full px-2 py-1 flex-row items-center">
+                              <Ionicons
+                                name="navigate"
+                                size={12}
+                                color="#10b981"
+                              />
+                              <Text className="text-xs text-green-700 ml-1 font-semibold">
+                                {getDistanceString(provider.distance)}
+                              </Text>
+                            </View>
+                          </View>
+                        )}
+
                         {getSpecialties(provider).length > 0 && (
                           <View className="flex-row mb-2">
                             {getSpecialties(provider).map(
@@ -398,7 +513,19 @@ const HomeScreen = () => {
                       : selectedCategory !== "All"
                       ? ` for ${selectedCategory}`
                       : ""}
+                    {activeLocationFilter &&
+                      ` within ${activeLocationFilter.radiusKm}km`}
                   </Text>
+                  {activeLocationFilter && (
+                    <TouchableOpacity
+                      onPress={handleClearLocationFilter}
+                      className="mt-4 bg-blue-600 px-6 py-3 rounded-xl"
+                    >
+                      <Text className="text-white font-semibold">
+                        Clear Location Filter
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                   {!loadingProviders && providers.length === 0 && (
                     <TouchableOpacity
                       onPress={fetchProviders}
@@ -417,6 +544,18 @@ const HomeScreen = () => {
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
+
+      {/* Location Filter Modal */}
+      <LocationFilterModal
+        visible={showLocationFilter}
+        onClose={() => setShowLocationFilter(false)}
+        onApplyFilter={handleApplyLocationFilter}
+        userAddress={
+          customerData?.location?.address
+            ? `${customerData.location.address}, ${customerData.location.city}, ${customerData.location.postalCode}`
+            : undefined
+        }
+      />
     </View>
   );
 };
