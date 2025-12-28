@@ -20,11 +20,18 @@ import { useCustomer } from "../context/CustomerContext";
 import { registerCustomerProfile } from "../services/apiService";
 import { registerWithFirebase } from "../services/authService";
 import ProfilePictureUpload from "../utils/ProfilePictureUpload";
+import AddressPickerWithMap from "../utils/AddressPickerWithMaps";
+
+interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
 
 export default function RegisterCustomer() {
   const router = useRouter();
   const customerContext = useCustomer() as any;
   const [step, setStep] = useState(1);
+  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
 
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("");
   const [tempUserId, setTempUserId] = useState<string>("");
@@ -160,18 +167,19 @@ export default function RegisterCustomer() {
       }
 
       const customerData = {
-        userId: newUserId,
-        name: fullName,
-        email: email,
-        phone: phone,
-        location: {
-          address,
-          city,
-          postalCode,
-        },
-        propertyType,
-        profilePhoto: finalProfilePictureUrl, // Add profile photo
-      };
+  userId: newUserId,
+  name: fullName,
+  email: email,
+  phone: phone,
+  location: {
+    address,
+    city,
+    postalCode,
+    coordinates: coordinates || undefined, 
+  },
+  propertyType,
+  profilePhoto: finalProfilePictureUrl,
+};
 
       console.log("Sending customer data:", {
         ...customerData,
@@ -373,74 +381,36 @@ export default function RegisterCustomer() {
     </View>
   );
 
-  const renderStep2 = () => (
-    <View className="w-full">
-      <Text className="text-2xl font-bold mb-2">Your Location</Text>
-      <Text className="text-gray-600 mb-6">
-        Help us connect you with nearby service providers
-      </Text>
+ const renderStep2 = () => (
+  <View className="w-full">
+    <Text className="text-2xl font-bold mb-2">Your Location</Text>
+    <Text className="text-gray-600 mb-6">
+      Help us connect you with nearby service providers
+    </Text>
 
-      <TextInput
-        placeholder="Street Address"
-        placeholderTextColor={colors.gray[500]}
-        value={address}
-        onChangeText={(text) => {
-          setAddress(text);
-          setErrors({ ...errors, address: "" });
-        }}
-        className={`w-full border p-3 rounded mb-1 px-4 ${
-          errors.address ? "border-red-500" : "border-gray-300"
-        }`}
-      />
-      {errors.address ? (
-        <Text className="text-red-500 text-sm mb-3 self-start">
-          {errors.address}
-        </Text>
-      ) : (
-        <View className="mb-3" />
-      )}
-
-      <View className="flex-row gap-3 mb-3">
-        <View className="flex-1">
-          <TextInput
-            placeholder="City"
-            placeholderTextColor={colors.gray[500]}
-            value={city}
-            onChangeText={(text) => {
-              setCity(text);
-              setErrors({ ...errors, city: "" });
-            }}
-            className={`w-full border p-3 rounded mb-1 px-4 ${
-              errors.city ? "border-red-500" : "border-gray-300"
-            }`}
-          />
-          {errors.city ? (
-            <Text className="text-red-500 text-sm mb-2 self-start">
-              {errors.city}
-            </Text>
-          ) : null}
-        </View>
-
-        <View className="w-32">
-          <TextInput
-            placeholder="Postal Code"
-            placeholderTextColor={colors.gray[500]}
-            value={postalCode}
-            onChangeText={(text) => {
-              setPostalCode(text);
-              setErrors({ ...errors, postalCode: "" });
-            }}
-            className={`w-full border p-3 rounded mb-1 px-4 ${
-              errors.postalCode ? "border-red-500" : "border-gray-300"
-            }`}
-          />
-          {errors.postalCode ? (
-            <Text className="text-red-500 text-sm mb-2 self-start">
-              {errors.postalCode}
-            </Text>
-          ) : null}
-        </View>
-      </View>
+    <AddressPickerWithMap
+      address={address}
+      city={city}
+      postalCode={postalCode}
+      onAddressChange={(text) => {
+        setAddress(text);
+        setErrors({ ...errors, address: "" });
+      }}
+      onCityChange={(text) => {
+        setCity(text);
+        setErrors({ ...errors, city: "" });
+      }}
+      onPostalCodeChange={(text) => {
+        setPostalCode(text);
+        setErrors({ ...errors, postalCode: "" });
+      }}
+      onCoordinatesConfirm={setCoordinates}
+      errors={{
+        address: errors.address,
+        city: errors.city,
+        postalCode: errors.postalCode,
+      }}
+    />
 
       <Text className="text-gray-700 font-semibold mb-3 mt-3">
         Property Type

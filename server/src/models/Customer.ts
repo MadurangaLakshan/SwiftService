@@ -9,6 +9,10 @@ export interface ICustomer extends Document {
     address: string;
     city: string;
     postalCode: string;
+    coordinates?: {
+      latitude: number;
+      longitude: number;
+    };
   };
   propertyType: "house" | "apartment" | "condo" | "commercial";
   profilePhoto?: string;
@@ -45,6 +49,10 @@ const CustomerSchema: Schema = new Schema(
       address: { type: String, required: true },
       city: { type: String, required: true, index: true },
       postalCode: { type: String, required: true },
+      coordinates: {
+        latitude: { type: Number },
+        longitude: { type: Number },
+      },
     },
     propertyType: {
       type: String,
@@ -61,7 +69,10 @@ const CustomerSchema: Schema = new Schema(
   }
 );
 
+// Indexes
 CustomerSchema.index({ "location.city": 1 });
 CustomerSchema.index({ email: 1 });
+// Optional: Add geospatial index for location-based queries
+CustomerSchema.index({ "location.coordinates": "2dsphere" });
 
 export default mongoose.model<ICustomer>("Customer", CustomerSchema);

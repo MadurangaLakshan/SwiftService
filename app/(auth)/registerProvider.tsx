@@ -20,7 +20,13 @@ import colors from "tailwindcss/colors";
 import { auth } from "../config/firebase";
 import { registerProviderProfile } from "../services/apiService";
 import { registerWithFirebase } from "../services/authService";
+import AddressPickerWithMap from "../utils/AddressPickerWithMaps";
 import ProfilePictureUpload from "../utils/ProfilePictureUpload";
+
+interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
 
 type ServiceType = {
   id: string;
@@ -43,7 +49,7 @@ export default function RegisterProvider() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-
+  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -235,6 +241,7 @@ export default function RegisterProvider() {
           city,
           postalCode,
           serviceRadius: parseInt(serviceRadius),
+          coordinates: coordinates || undefined,
         },
         serviceRadius: parseInt(serviceRadius),
         profilePhoto: finalProfilePictureUrl,
@@ -625,65 +632,29 @@ export default function RegisterProvider() {
       <Text className="text-2xl font-bold mb-2">Service Location</Text>
       <Text className="text-gray-600 mb-6">Where do you provide services?</Text>
 
-      <TextInput
-        placeholder="Street Address"
-        placeholderTextColor={colors.gray[500]}
-        value={address}
-        onChangeText={(text) => {
+      <AddressPickerWithMap
+        address={address}
+        city={city}
+        postalCode={postalCode}
+        onAddressChange={(text) => {
           setAddress(text);
           setErrors({ ...errors, address: "" });
         }}
-        className={`w-full border p-3 rounded mb-1 ${
-          errors.address ? "border-red-500" : "border-gray-300"
-        }`}
-      />
-      {errors.address ? (
-        <Text className="text-red-500 text-sm mb-3 self-start">
-          {errors.address}
-        </Text>
-      ) : (
-        <View className="mb-3" />
-      )}
-
-      <TextInput
-        placeholder="City"
-        placeholderTextColor={colors.gray[500]}
-        value={city}
-        onChangeText={(text) => {
+        onCityChange={(text) => {
           setCity(text);
           setErrors({ ...errors, city: "" });
         }}
-        className={`w-full border p-3 rounded mb-1 ${
-          errors.city ? "border-red-500" : "border-gray-300"
-        }`}
-      />
-      {errors.city ? (
-        <Text className="text-red-500 text-sm mb-3 self-start">
-          {errors.city}
-        </Text>
-      ) : (
-        <View className="mb-3" />
-      )}
-
-      <TextInput
-        placeholder="Postal Code"
-        placeholderTextColor={colors.gray[500]}
-        value={postalCode}
-        onChangeText={(text) => {
+        onPostalCodeChange={(text) => {
           setPostalCode(text);
           setErrors({ ...errors, postalCode: "" });
         }}
-        className={`w-full border p-3 rounded mb-1 ${
-          errors.postalCode ? "border-red-500" : "border-gray-300"
-        }`}
+        onCoordinatesConfirm={setCoordinates}
+        errors={{
+          address: errors.address,
+          city: errors.city,
+          postalCode: errors.postalCode,
+        }}
       />
-      {errors.postalCode ? (
-        <Text className="text-red-500 text-sm mb-3 self-start">
-          {errors.postalCode}
-        </Text>
-      ) : (
-        <View className="mb-3" />
-      )}
 
       <Text className="text-gray-700 font-semibold mb-2">Service Radius</Text>
       <View className="flex-row items-center mb-6">

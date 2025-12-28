@@ -17,6 +17,10 @@ export interface IProvider extends Document {
     city: string;
     postalCode: string;
     serviceRadius: number;
+    coordinates: {
+      latitude: Number;
+      longitude: Number;
+    };
   };
   rating: number;
   totalJobs: number;
@@ -77,6 +81,10 @@ const ProviderSchema: Schema = new Schema(
         default: 10,
         min: 1,
         max: 100,
+      },
+      coordinates: {
+        latitude: { type: Number },
+        longitude: { type: Number },
       },
     },
     rating: {
