@@ -22,6 +22,7 @@ import {
   getBookingById,
   submitBookingReview,
 } from "../services/apiService";
+import TrackingScreen from "./TrackingScreen";
 
 type BookingStatus =
   | "pending"
@@ -103,6 +104,7 @@ const BookingDetailsScreen = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [showTrackingModal, setShowTrackingModal] = useState(false); // NEW
   const [rating, setRating] = useState(0);
   const [cancelReason, setCancelReason] = useState("");
   const [reviewText, setReviewText] = useState("");
@@ -351,6 +353,12 @@ const BookingDetailsScreen = () => {
     }
   };
 
+  // NEW: Check if tracking is available
+  const canTrack =
+    booking?.status === "on-the-way" ||
+    booking?.status === "arrived" ||
+    booking?.status === "in-progress";
+
   if (loading) {
     return (
       <View className="flex-1 bg-gray-50 items-center justify-center">
@@ -428,6 +436,19 @@ const BookingDetailsScreen = () => {
             </View>
           </View>
         </View>
+
+        {/* NEW: Track Provider Button */}
+        {canTrack && (
+          <TouchableOpacity
+            onPress={() => setShowTrackingModal(true)}
+            className="mx-6 mt-4 bg-blue-600 p-4 rounded-2xl flex-row items-center justify-center shadow-lg"
+          >
+            <Ionicons name="navigate" size={24} color="white" />
+            <Text className="text-white font-bold text-base ml-2">
+              Track Provider Live
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* Timeline Progress */}
         {booking.timeline && (
@@ -836,7 +857,6 @@ const BookingDetailsScreen = () => {
         </View>
       )}
 
-      {/* Awaiting Customer Approval - Approve or Dispute */}
       {booking.status === "awaiting-customer-approval" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <Text className="text-center text-gray-600 text-sm mb-3">
@@ -872,7 +892,6 @@ const BookingDetailsScreen = () => {
         </View>
       )}
 
-      {/* Completed - Rate Provider */}
       {booking.status === "completed" && !booking.rating && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <View className="bg-green-50 border border-green-200 p-4 rounded-xl mb-3">
@@ -895,7 +914,6 @@ const BookingDetailsScreen = () => {
         </View>
       )}
 
-      {/* Already Rated */}
       {booking.status === "completed" && booking.rating && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <View className="bg-green-50 border border-green-200 p-4 rounded-xl">
@@ -924,7 +942,6 @@ const BookingDetailsScreen = () => {
         </View>
       )}
 
-      {/* Disputed Status */}
       {booking.status === "disputed" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <View className="bg-pink-50 border border-pink-200 p-4 rounded-xl">
@@ -944,7 +961,6 @@ const BookingDetailsScreen = () => {
         </View>
       )}
 
-      {/* Cancelled Status */}
       {booking.status === "cancelled" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <View className="bg-red-50 border border-red-200 p-4 rounded-xl">
@@ -958,7 +974,6 @@ const BookingDetailsScreen = () => {
         </View>
       )}
 
-      {/* Tracking Status Messages for Other Statuses */}
       {(booking.status === "on-the-way" ||
         booking.status === "arrived" ||
         booking.status === "in-progress") && (
@@ -1006,7 +1021,7 @@ const BookingDetailsScreen = () => {
         </View>
       )}
 
-      {/* Cancel Modal */}
+      {/* Modals */}
       <Modal
         visible={showCancelModal}
         transparent={true}
@@ -1073,7 +1088,6 @@ const BookingDetailsScreen = () => {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Approval Modal */}
       <Modal
         visible={showApprovalModal}
         transparent={true}
@@ -1123,7 +1137,6 @@ const BookingDetailsScreen = () => {
         </View>
       </Modal>
 
-      {/* Dispute Modal */}
       <Modal
         visible={showDisputeModal}
         transparent={true}
@@ -1200,7 +1213,6 @@ const BookingDetailsScreen = () => {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Rating Modal */}
       <Modal
         visible={showRatingModal}
         transparent={true}
@@ -1277,6 +1289,18 @@ const BookingDetailsScreen = () => {
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* NEW: Tracking Modal */}
+      <Modal
+        visible={showTrackingModal}
+        animationType="slide"
+        onRequestClose={() => setShowTrackingModal(false)}
+      >
+        <TrackingScreen
+          bookingId={booking._id}
+          onClose={() => setShowTrackingModal(false)}
+        />
       </Modal>
     </View>
   );

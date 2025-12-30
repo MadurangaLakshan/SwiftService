@@ -164,6 +164,12 @@ export default function CustomerLayout() {
             href: null,
           }}
         />
+        <Tabs.Screen
+          name="TrackingScreen"
+          options={{
+            href: null,
+          }}
+        />
       </Tabs>
     </CustomerProvider>
   );

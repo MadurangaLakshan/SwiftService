@@ -13,8 +13,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useCustomer } from "../context/CustomerContext";
 import { createBooking, getProviderReviews } from "../services/apiService";
 import { createConversation } from "../services/messageService";
+import BookingAddressSelector from "../utils/BookingAddressSelector.tsx";
 import {
   convertImageToBase64,
   pickMultipleImages,
@@ -23,6 +25,7 @@ import {
 } from "../utils/imageConverter";
 
 const ProviderDetailsScreen = () => {
+  const { customerData } = useCustomer();
   const params = useLocalSearchParams();
   const {
     id,
@@ -59,6 +62,7 @@ const ProviderDetailsScreen = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [address, setAddress] = useState("");
+  const [serviceLocation, setServiceLocation] = useState<any>(null);
   const [notes, setNotes] = useState("");
   const [attachedPhotos, setAttachedPhotos] = useState<string[]>([]);
   const [reviewsData, setReviewsData] = useState<any[]>([]);
@@ -219,6 +223,7 @@ const ProviderDetailsScreen = () => {
         scheduledDate: selectedDate,
         timeSlot: selectedTime,
         serviceAddress: address,
+        serviceLocation,
         additionalNotes: notes,
         hourlyRate: hourlyRate,
         estimatedHours: 1,
@@ -586,16 +591,16 @@ const ProviderDetailsScreen = () => {
                 ))}
               </View>
 
-              {/* Address */}
               <Text className="text-sm font-semibold text-gray-700 mb-3">
                 Service Address *
               </Text>
-              <TextInput
-                value={address}
-                onChangeText={setAddress}
-                placeholder="Enter your address"
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-6 text-gray-700"
-                multiline
+              <BookingAddressSelector
+                onSelectLocation={(location) => {
+                  setAddress(location.formattedAddress);
+                  setServiceLocation(location);
+                }}
+                userProfileAddress={customerData?.location.address}
+                userProfileCoordinates={customerData?.location.coordinates}
               />
 
               {/* Photo Attachments */}

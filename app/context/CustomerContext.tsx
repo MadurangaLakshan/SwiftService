@@ -12,6 +12,10 @@ interface CustomerData {
     address: string;
     city: string;
     postalCode: string;
+    coordinates?: {
+      latitude: number;
+      longitude: number;
+    };
   };
   propertyType: string;
   profilePhoto: string;

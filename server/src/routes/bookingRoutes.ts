@@ -21,9 +21,22 @@ router.post("/", authenticateUser, async (req: AuthRequest, res) => {
       hourlyRate,
       estimatedHours,
       customerAttachedPhotos,
+      serviceLocation,
     } = req.body;
 
     const customerId = req.user?.uid;
+
+    // Validate location
+    if (
+      !serviceLocation ||
+      !serviceLocation.latitude ||
+      !serviceLocation.longitude
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "Service location is required",
+      });
+    }
 
     if (!customerId) {
       return res.status(401).json({
@@ -107,7 +120,8 @@ router.post("/", authenticateUser, async (req: AuthRequest, res) => {
       category,
       scheduledDate: new Date(scheduledDate),
       timeSlot,
-      serviceAddress,
+      serviceAddress: serviceLocation.formattedAddress,
+      serviceLocation,
       additionalNotes,
       customerAttachedPhotos: customerAttachedPhotos || [], // Added: Store photos
       status: "pending",

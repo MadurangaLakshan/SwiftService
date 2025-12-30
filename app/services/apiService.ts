@@ -1,3 +1,4 @@
+import * as Location from "expo-location";
 import { auth } from "../config/firebase";
 
 const API_URL = __DEV__
@@ -241,6 +242,7 @@ export const getProviderReviews = async (providerId: string) => {
   });
 };
 
+// UPDATED: Now accepts serviceLocation with coordinates
 export const createBooking = async (bookingData: {
   providerId: string;
   serviceType: string;
@@ -248,9 +250,16 @@ export const createBooking = async (bookingData: {
   scheduledDate: string;
   timeSlot: string;
   serviceAddress: string;
+  serviceLocation?: {
+    latitude: number;
+    longitude: number;
+    formattedAddress: string;
+    isCustomAddress: boolean;
+  };
   additionalNotes?: string;
   hourlyRate: number;
   estimatedHours?: number;
+  customerAttachedPhotos?: string[];
 }) => {
   return authenticatedRequest("/bookings", {
     method: "POST",
@@ -305,7 +314,7 @@ export const disputeBooking = async (
   }
 ) => {
   return authenticatedRequest(`/bookings/${bookingId}/dispute`, {
-    method: "POST",
+    method: "PUT",
     body: JSON.stringify(disputeData),
   });
 };
@@ -319,7 +328,7 @@ export const submitBookingReview = async (
   }
 ) => {
   return authenticatedRequest(`/bookings/${bookingId}/review`, {
-    method: "POST",
+    method: "PUT",
     body: JSON.stringify(reviewData),
   });
 };
@@ -333,5 +342,152 @@ export const isApiAvailable = async (): Promise<boolean> => {
   } catch (error) {
     console.error("API not available:", error);
     return false;
+  }
+};
+
+// ============================================================================
+// NEW: LOCATION TRACKING API FUNCTIONS
+// ============================================================================
+
+/**
+ * Geocode an address to get coordinates
+ * Uses Google Geocoding API
+ */
+export const geocodeAddress = async (address: string) => {
+  try {
+    const response = await authenticatedRequest("/location/geocode", {
+      method: "POST",
+      body: JSON.stringify({ address }),
+    });
+
+    return response;
+  } catch (error) {
+    console.error("Error geocoding address:", error);
+    throw error;
+  }
+};
+
+/**
+ * Reverse geocode coordinates to get address
+ * Converts latitude/longitude to formatted address
+ */
+export const reverseGeocode = async (latitude: number, longitude: number) => {
+  try {
+    const response = await authenticatedRequest("/location/reverse-geocode", {
+      method: "POST",
+      body: JSON.stringify({ latitude, longitude }),
+    });
+
+    return response;
+  } catch (error) {
+    console.error("Error reverse geocoding:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update provider's real-time location during service
+ * Call this every 10-15 seconds when provider status is "on-the-way"
+ */
+export const updateProviderLocation = async (
+  bookingId: string,
+  locationData: {
+    latitude: number;
+    longitude: number;
+    heading?: number;
+    speed?: number;
+  }
+) => {
+  try {
+    const response = await authenticatedRequest(
+      `/location/${bookingId}/provider-location`,
+      {
+        method: "PUT",
+        body: JSON.stringify(locationData),
+      }
+    );
+
+    return response;
+  } catch (error) {
+    console.error("Error updating provider location:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get real-time tracking information for a booking
+ * Returns provider location, service location, ETA, and distance
+ */
+export const getBookingTracking = async (bookingId: string) => {
+  try {
+    const response = await authenticatedRequest(
+      `/location/${bookingId}/tracking`,
+      {
+        method: "GET",
+      }
+    );
+
+    return response;
+  } catch (error) {
+    console.error("Error fetching tracking data:", error);
+    throw error;
+  }
+};
+
+/**
+ * Start location tracking for provider
+ * Returns a subscription that can be cleaned up later
+ * Call this when booking status changes to "on-the-way"
+ */
+export const startLocationTracking = async (
+  bookingId: string
+): Promise<Location.LocationSubscription | null> => {
+  try {
+    // Request permissions
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      console.error("Location permission not granted");
+      throw new Error("Location permission not granted");
+    }
+
+    // Start watching position
+    const subscription = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.High,
+        timeInterval: 10000, // Update every 10 seconds
+        distanceInterval: 10, // Or when moved 10 meters
+      },
+      async (location) => {
+        try {
+          await updateProviderLocation(bookingId, {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            heading: location.coords.heading || undefined,
+            speed: location.coords.speed || undefined,
+          });
+          console.log("Location updated successfully");
+        } catch (error) {
+          console.error("Error updating location:", error);
+        }
+      }
+    );
+
+    return subscription;
+  } catch (error) {
+    console.error("Error starting location tracking:", error);
+    return null;
+  }
+};
+
+/**
+ * Stop location tracking for provider
+ * Call this when booking is completed/cancelled or when provider stops moving
+ */
+export const stopLocationTracking = (
+  locationSubscription: Location.LocationSubscription | null
+) => {
+  if (locationSubscription) {
+    locationSubscription.remove();
+    console.log("Location tracking stopped");
   }
 };

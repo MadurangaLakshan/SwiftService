@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -19,6 +20,8 @@ import {
 import {
   cancelBooking,
   getBookingById,
+  startLocationTracking,
+  stopLocationTracking,
   updateBookingStatus,
   uploadWorkPhotos,
 } from "../services/apiService";
@@ -98,11 +101,64 @@ const BookingDetailsScreen = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [viewerImages, setViewerImages] = useState<string[]>([]);
 
+  // NEW: Location tracking state
+  const [locationSubscription, setLocationSubscription] =
+    useState<Location.LocationSubscription | null>(null);
+  const [isTracking, setIsTracking] = useState(false);
+
   useEffect(() => {
     if (bookingId) {
       fetchBookingDetails();
     }
   }, [bookingId]);
+
+  // NEW: Auto-start/stop location tracking based on status
+  useEffect(() => {
+    if (!booking) return;
+
+    const shouldTrack = booking.status === "on-the-way";
+
+    if (shouldTrack && !isTracking) {
+      handleStartTracking();
+    } else if (!shouldTrack && isTracking) {
+      handleStopTracking();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (locationSubscription) {
+        stopLocationTracking(locationSubscription);
+      }
+    };
+  }, [booking?.status]);
+
+  // NEW: Start location tracking
+  const handleStartTracking = async () => {
+    try {
+      const subscription = await startLocationTracking(bookingId as string);
+      if (subscription) {
+        setLocationSubscription(subscription);
+        setIsTracking(true);
+        console.log("📍 Location tracking started");
+      }
+    } catch (error) {
+      console.error("Failed to start tracking:", error);
+      Alert.alert(
+        "Location Error",
+        "Could not start location tracking. Please enable location services."
+      );
+    }
+  };
+
+  // NEW: Stop location tracking
+  const handleStopTracking = () => {
+    if (locationSubscription) {
+      stopLocationTracking(locationSubscription);
+      setLocationSubscription(null);
+      setIsTracking(false);
+      console.log("📍 Location tracking stopped");
+    }
+  };
 
   const fetchBookingDetails = async () => {
     try {
@@ -410,6 +466,19 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
 
+        {/* NEW: Location Tracking Indicator */}
+        {isTracking && (
+          <View className="mx-6 mt-4 bg-blue-50 border border-blue-200 rounded-2xl p-4">
+            <View className="flex-row items-center">
+              <View className="w-3 h-3 bg-blue-600 rounded-full mr-3 animate-pulse" />
+              <Ionicons name="navigate" size={20} color="#3b82f6" />
+              <Text className="ml-2 text-blue-700 font-medium">
+                Sharing your location with customer
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Timeline Progress */}
         {booking.timeline && (
           <View className="mx-6 mt-4 bg-white rounded-2xl p-4 border border-gray-200">
@@ -657,7 +726,6 @@ const BookingDetailsScreen = () => {
                         {index + 1}/{booking.customerAttachedPhotos?.length}
                       </Text>
                     </View>
-                    {/* Zoom indicator overlay */}
                     <View className="absolute inset-0 items-center justify-center">
                       <View className="bg-black/30 rounded-full p-2">
                         <Ionicons
@@ -800,6 +868,7 @@ const BookingDetailsScreen = () => {
           </Text>
         </View>
       </ScrollView>
+
       {/* Action Buttons */}
       {booking.status === "pending" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
@@ -1245,6 +1314,7 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
       </Modal>
+
       {/* Image Viewer Modal */}
       <Modal
         visible={showImageViewer}
@@ -1253,7 +1323,6 @@ const BookingDetailsScreen = () => {
         onRequestClose={() => setShowImageViewer(false)}
       >
         <View className="flex-1 bg-black">
-          {/* Header */}
           <View className="absolute top-0 left-0 right-0 z-10 bg-black/80 px-6 pt-12 pb-4">
             <View className="flex-row items-center justify-between">
               <TouchableOpacity
@@ -1269,7 +1338,6 @@ const BookingDetailsScreen = () => {
             </View>
           </View>
 
-          {/* Image Display */}
           <ScrollView
             horizontal
             pagingEnabled
@@ -1304,7 +1372,6 @@ const BookingDetailsScreen = () => {
             ))}
           </ScrollView>
 
-          {/* Navigation Dots */}
           {viewerImages.length > 1 && (
             <View className="absolute bottom-10 left-0 right-0">
               <View className="flex-row justify-center items-center">

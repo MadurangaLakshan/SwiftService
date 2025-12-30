@@ -7,6 +7,7 @@ import { connectDatabase } from "./config/database";
 import { authenticateSocket } from "./middleware/socketAuthMiddleware";
 import bookingRoutes from "./routes/bookingRoutes";
 import customerRoutes from "./routes/customerRoutes";
+import locationRoutes from "./routes/locationRoutes";
 import messageRoutes from "./routes/messageRoute";
 import notificationRoutes from "./routes/notificationRoutes";
 import providerRoutes from "./routes/providerRoutes";
@@ -50,6 +51,7 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/location", locationRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "OK", message: "Server is running" });

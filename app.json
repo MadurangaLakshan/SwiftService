@@ -12,7 +12,7 @@
     "ios": {
       "supportsTablet": true,
       "config": {
-        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+        "googleMapsApiKey": "AIzaSyDPJmFKCv8xanY7qsstjf9SJYOjZJkfU_k"
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "SwiftService needs your location to find nearby service providers and show accurate distances.",

@@ -8,6 +8,21 @@ export interface IBooking extends Document {
   scheduledDate: Date;
   timeSlot: string;
   serviceAddress: string;
+
+  serviceLocation: {
+    latitude: number;
+    longitude: number;
+    formattedAddress: string;
+    isCustomAddress: boolean;
+  };
+
+  providerLocation?: {
+    latitude: number;
+    longitude: number;
+    lastUpdated: Date;
+    heading?: number;
+    speed?: number;
+  };
   additionalNotes?: string;
   customerAttachedPhotos?: string[];
   status:
@@ -48,6 +63,13 @@ export interface IBooking extends Document {
     workStartedAt?: Date;
     workCompletedAt?: Date;
     customerApprovedAt?: Date;
+  };
+
+  tracking?: {
+    estimatedDistance?: number;
+    estimatedDuration?: number;
+    actualDistance?: number;
+    lastCalculated?: Date;
   };
   workDocumentation?: {
     beforePhotos: string[];
@@ -106,6 +128,33 @@ const BookingSchema: Schema = new Schema(
     serviceAddress: {
       type: String,
       required: true,
+    },
+    // NEW: Service location with coordinates
+    serviceLocation: {
+      latitude: {
+        type: Number,
+        required: true,
+      },
+      longitude: {
+        type: Number,
+        required: true,
+      },
+      formattedAddress: {
+        type: String,
+        required: true,
+      },
+      isCustomAddress: {
+        type: Boolean,
+        default: false,
+      },
+    },
+
+    providerLocation: {
+      latitude: Number,
+      longitude: Number,
+      lastUpdated: Date,
+      heading: Number,
+      speed: Number,
     },
     additionalNotes: {
       type: String,
@@ -182,6 +231,13 @@ const BookingSchema: Schema = new Schema(
       workCompletedAt: { type: Date },
       customerApprovedAt: { type: Date },
     },
+
+    tracking: {
+      estimatedDistance: Number,
+      estimatedDuration: Number,
+      actualDistance: Number,
+      lastCalculated: Date,
+    },
     workDocumentation: {
       beforePhotos: [{ type: String }],
       afterPhotos: [{ type: String }],
@@ -233,7 +289,15 @@ BookingSchema.index({ scheduledDate: 1, status: 1 });
 BookingSchema.index({ "timeline.bookedAt": 1 });
 BookingSchema.index({ "dispute.status": 1 });
 
-// Pre-save middleware to set timeline.bookedAt on creation
+BookingSchema.index({
+  "serviceLocation.latitude": 1,
+  "serviceLocation.longitude": 1,
+});
+BookingSchema.index({
+  "providerLocation.latitude": 1,
+  "providerLocation.longitude": 1,
+});
+
 BookingSchema.pre(
   "save",
   function (
@@ -273,6 +337,27 @@ BookingSchema.methods.canTransitionTo = function (newStatus: string): boolean {
   };
 
   return validTransitions[this.status]?.includes(newStatus) || false;
+};
+
+// NEW: Method to calculate distance between two coordinates (Haversine formula)
+BookingSchema.methods.calculateDistance = function (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // Distance in meters
 };
 
 export default mongoose.model<IBooking>("Booking", BookingSchema);
