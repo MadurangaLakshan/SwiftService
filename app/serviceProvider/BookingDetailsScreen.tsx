@@ -132,24 +132,25 @@ const BookingDetailsScreen = () => {
     };
   }, [booking?.status]);
 
-  // NEW: Start location tracking
   const handleStartTracking = async () => {
+    console.log("🚀 Attempting to start tracking for booking:", bookingId);
     try {
       const subscription = await startLocationTracking(bookingId as string);
       if (subscription) {
         setLocationSubscription(subscription);
         setIsTracking(true);
-        console.log("📍 Location tracking started");
+        console.log("✅ Location tracking started successfully");
+      } else {
+        console.log("❌ startLocationTracking returned null");
       }
     } catch (error) {
-      console.error("Failed to start tracking:", error);
+      console.error("❌ Failed to start tracking:", error);
       Alert.alert(
         "Location Error",
         "Could not start location tracking. Please enable location services."
       );
     }
   };
-
   // NEW: Stop location tracking
   const handleStopTracking = () => {
     if (locationSubscription) {

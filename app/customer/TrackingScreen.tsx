@@ -111,12 +111,12 @@ const TrackingScreen: React.FC<TrackingScreenProps> = ({
       const response = await getBookingTracking(bookingId);
 
       if (response.success && response.data) {
-        setTrackingData(response.data);
+        setTrackingData(response.data.data);
 
-        if (response.data.providerLocation && !mapRegion) {
+        if (response.data.data.providerLocation && !mapRegion) {
           setMapRegion({
-            latitude: response.data.providerLocation.latitude,
-            longitude: response.data.providerLocation.longitude,
+            latitude: response.data.data.providerLocation.latitude,
+            longitude: response.data.data.providerLocation.longitude,
             latitudeDelta: 0.05,
             longitudeDelta: 0.05,
           });
@@ -303,39 +303,40 @@ const TrackingScreen: React.FC<TrackingScreenProps> = ({
       </MapView>
 
       {/* Bottom Info Card */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl px-6 py-6">
+      <View className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl px-6 py-4">
         {/* Status Banner */}
         <View
-          className={`${getStatusColor()} rounded-2xl p-4 mb-4 flex-row items-center`}
+          className={`${getStatusColor()} rounded-xl p-3 mb-3 flex-row items-center`}
         >
-          <Ionicons name="location" size={24} color="white" />
-          <Text className="flex-1 ml-3 text-white font-bold text-base">
+          <Ionicons name="location" size={20} color="white" />
+          <Text className="flex-1 ml-3 text-white font-bold text-sm">
             {getStatusMessage()}
           </Text>
         </View>
 
         {/* ETA and Distance */}
         {trackingData.status === "on-the-way" && (
-          <View className="flex-row mb-4">
-            <View className="flex-1 bg-blue-50 rounded-xl p-4 mr-2">
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="time-outline" size={20} color="#3b82f6" />
-                <Text className="text-xs text-blue-600 ml-2 font-medium">
+          <View className="flex-row mb-3">
+            <View className="flex-1 bg-blue-50 rounded-xl p-3 mr-2">
+              <View className="flex-row items-center mb-1">
+                <Ionicons name="time-outline" size={18} color="#3b82f6" />
+
+                <Text className="text-xs text-blue-600 ml-1 font-medium">
                   ETA
                 </Text>
               </View>
-              <Text className="text-2xl font-bold text-blue-700">
+              <Text className="text-xl font-bold text-blue-700">
                 {formatETA(trackingData.tracking?.estimatedDuration)}
               </Text>
             </View>
-            <View className="flex-1 bg-green-50 rounded-xl p-4 ml-2">
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="navigate-outline" size={20} color="#10b981" />
-                <Text className="text-xs text-green-600 ml-2 font-medium">
+            <View className="flex-1 bg-green-50 rounded-xl p-3 ml-2">
+              <View className="flex-row items-center mb-1">
+                <Ionicons name="navigate-outline" size={18} color="#10b981" />
+                <Text className="text-xs text-green-600 ml-1 font-medium">
                   Distance
                 </Text>
               </View>
-              <Text className="text-2xl font-bold text-green-700">
+              <Text className="text-xl font-bold text-green-700">
                 {formatDistance(trackingData.tracking?.estimatedDistance)}
               </Text>
             </View>
@@ -343,43 +344,43 @@ const TrackingScreen: React.FC<TrackingScreenProps> = ({
         )}
 
         {/* Provider Info */}
-        <View className="flex-row items-center mb-4 bg-gray-50 rounded-xl p-4">
+        <View className="flex-row items-center mb-3 bg-gray-50 rounded-xl p-3">
           <Image
             source={{
               uri:
                 trackingData.providerDetails.profilePhoto ||
                 "https://via.placeholder.com/60",
             }}
-            className="w-14 h-14 rounded-full"
+            className="w-12 h-12 rounded-full"
           />
-          <View className="flex-1 ml-4">
-            <Text className="text-lg font-bold text-gray-800">
+          <View className="flex-1 ml-3">
+            <Text className="text-base font-bold text-gray-800">
               {trackingData.providerDetails.name}
             </Text>
-            <Text className="text-sm text-gray-600">Service Provider</Text>
+            <Text className="text-xs text-gray-600">Service Provider</Text>
           </View>
           <TouchableOpacity
             onPress={handleCall}
-            className="w-12 h-12 bg-blue-600 rounded-full items-center justify-center"
+            className="w-11 h-11 bg-blue-600 rounded-full items-center justify-center"
           >
-            <Ionicons name="call" size={24} color="white" />
+            <Ionicons name="call" size={22} color="white" />
           </TouchableOpacity>
         </View>
 
         {/* Destination Address */}
-        <View className="bg-gray-50 rounded-xl p-4">
+        <View className="bg-gray-50 rounded-xl p-3">
           <View className="flex-row items-start">
             <Ionicons
               name="location-sharp"
-              size={20}
+              size={18}
               color="#ef4444"
               style={{ marginTop: 2 }}
             />
-            <View className="flex-1 ml-3">
+            <View className="flex-1 ml-2">
               <Text className="text-xs text-gray-500 mb-1">
                 Service Location
               </Text>
-              <Text className="text-sm font-medium text-gray-800">
+              <Text className="text-xs font-medium text-gray-800">
                 {trackingData.serviceLocation.formattedAddress}
               </Text>
             </View>
