@@ -237,7 +237,7 @@ export const createReview = async (reviewData: any) => {
 };
 
 export const getProviderReviews = async (providerId: string) => {
-  return authenticatedRequest(`/providers/${providerId}/reviews`, {
+  return authenticatedRequest(`/reviews/providers/${providerId}/reviews`, {
     method: "GET",
   });
 };
@@ -324,11 +324,10 @@ export const submitBookingReview = async (
   reviewData: {
     rating: number;
     review?: string;
-    customerPhoto?: string;
   }
 ) => {
-  return authenticatedRequest(`/bookings/${bookingId}/review`, {
-    method: "PUT",
+  return authenticatedRequest(`/reviews/bookings/${bookingId}/review`, {
+    method: "POST",
     body: JSON.stringify(reviewData),
   });
 };

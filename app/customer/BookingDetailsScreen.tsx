@@ -222,14 +222,16 @@ const BookingDetailsScreen = () => {
       return;
     }
 
-    const customerPhoto = booking?.customerDetails.image || undefined;
+    if (!booking) {
+      Alert.alert("Error", "Booking data not available");
+      return;
+    }
 
     try {
       setActionLoading(true);
       const response = await submitBookingReview(bookingId as string, {
         rating,
         review: reviewText,
-        customerPhoto,
       });
 
       if (response.success) {
@@ -814,7 +816,7 @@ const BookingDetailsScreen = () => {
           </View>
         )}
 
-        {booking.dispute && (
+        {booking.status === "disputed" && booking.dispute && (
           <View className="mx-6 mt-4 bg-pink-50 rounded-2xl p-4 border border-pink-200">
             <Text className="text-sm font-semibold text-pink-700 mb-2">
               DISPUTE DETAILS

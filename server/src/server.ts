@@ -49,7 +49,7 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/messages", messageRoutes);
-app.use("/api", reviewRoutes);
+app.use("/api/reviews", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/location", locationRoutes);
 

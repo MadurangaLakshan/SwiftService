@@ -155,15 +155,17 @@ const ProviderReviewsScreen = () => {
 
           {reviewData?.breakdown && (
             <View>
-              {[5, 4, 3, 2, 1].map((stars) =>
-                renderRatingBar(
-                  stars,
-                  reviewData.breakdown[
-                    stars as keyof typeof reviewData.breakdown
-                  ],
-                  reviewData.total
-                )
-              )}
+              {[5, 4, 3, 2, 1].map((stars) => (
+                <View key={stars}>
+                  {renderRatingBar(
+                    stars,
+                    reviewData.breakdown[
+                      stars as keyof typeof reviewData.breakdown
+                    ],
+                    reviewData.total
+                  )}
+                </View>
+              ))}
             </View>
           )}
         </View>
