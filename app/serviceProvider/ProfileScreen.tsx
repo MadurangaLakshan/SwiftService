@@ -58,10 +58,10 @@ const ProfileScreen: React.FC = () => {
     },
     {
       id: 4,
-      title: "Favorite Providers",
-      icon: "heart-outline",
-      color: "#ef4444",
-      route: "/customer/FavoriteProvidersScreen",
+      title: "My Reviews",
+      icon: "star-outline",
+      color: "#fbbf24",
+      route: "/serviceProvider/ReviewScreen",
     },
     {
       id: 5,

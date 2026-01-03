@@ -160,6 +160,12 @@ export default function ProviderLayout() {
             href: null,
           }}
         />
+        <Tabs.Screen
+          name="ReviewScreen"
+          options={{
+            href: null,
+          }}
+        />
       </Tabs>
     </ProviderProvider>
   );
