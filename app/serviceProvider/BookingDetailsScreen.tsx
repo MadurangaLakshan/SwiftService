@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -25,6 +24,12 @@ import {
   updateBookingStatus,
   uploadWorkPhotos,
 } from "../services/apiService";
+import {
+  convertImageToBase64,
+  pickMultipleImages,
+  showImagePickerOptions,
+  takePhoto,
+} from "../utils/imageConverter";
 
 type BookingStatus =
   | "pending"
@@ -85,7 +90,7 @@ interface Booking {
 const BookingDetailsScreen = () => {
   const params = useLocalSearchParams();
   const { bookingId } = params;
-
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -232,20 +237,66 @@ const BookingDetailsScreen = () => {
   };
 
   const pickImage = async (type: "before" | "after") => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 0.8,
-    });
+    showImagePickerOptions(
+      // Gallery option
+      async () => {
+        try {
+          const imageUris = await pickMultipleImages(5);
 
-    if (!result.canceled && result.assets) {
-      const newPhotos = result.assets.map((asset) => asset.uri);
-      if (type === "before") {
-        setBeforePhotos([...beforePhotos, ...newPhotos]);
-      } else {
-        setAfterPhotos([...afterPhotos, ...newPhotos]);
-      }
-    }
+          if (imageUris.length === 0) return;
+
+          Alert.alert("Processing", "Converting images...");
+
+          const base64Images: string[] = [];
+          for (const uri of imageUris) {
+            try {
+              const base64 = await convertImageToBase64(uri);
+              base64Images.push(base64);
+            } catch (error) {
+              console.error("Error converting image:", error);
+            }
+          }
+
+          if (base64Images.length > 0) {
+            if (type === "before") {
+              setBeforePhotos([...beforePhotos, ...base64Images]);
+            } else {
+              setAfterPhotos([...afterPhotos, ...base64Images]);
+            }
+
+            Alert.alert("Success", `${base64Images.length} photo(s) added`);
+          }
+        } catch (error) {
+          console.error("Error picking images:", error);
+          Alert.alert("Error", "Failed to pick images");
+        }
+      },
+      // Camera option
+      async () => {
+        try {
+          const photoUri = await takePhoto();
+
+          if (!photoUri) return;
+
+          Alert.alert("Processing", "Converting photo...");
+
+          const base64 = await convertImageToBase64(photoUri);
+
+          if (type === "before") {
+            setBeforePhotos([...beforePhotos, base64]);
+          } else {
+            setAfterPhotos([...afterPhotos, base64]);
+          }
+
+          Alert.alert("Success", "Photo added successfully");
+        } catch (error) {
+          console.error("Error taking photo:", error);
+          Alert.alert("Error", "Failed to take photo");
+        }
+      },
+      "Add Work Photo",
+      "Choose how you want to add photos"
+    );
   };
 
   const handleCompleteWork = async () => {
@@ -257,17 +308,28 @@ const BookingDetailsScreen = () => {
     try {
       setActionLoading(true);
 
-      // Upload photos if any
-      if (beforePhotos.length > 0 || afterPhotos.length > 0) {
-        await uploadWorkPhotos(bookingId as string, {
+      // Step 1: Upload photos if any (but don't update status yet)
+      if (
+        beforePhotos.length > 0 ||
+        afterPhotos.length > 0 ||
+        workNotes.trim()
+      ) {
+        const uploadResponse = await uploadWorkPhotos(bookingId as string, {
           beforePhotos,
           afterPhotos,
           workNotes,
         });
+
+        if (!uploadResponse.success) {
+          Alert.alert(
+            "Warning",
+            "Photos upload failed, but continuing with completion"
+          );
+        }
       }
 
-      // Update status to awaiting customer approval
-      await updateBookingStatus(
+      // Step 2: Update status to awaiting customer approval WITH actual hours
+      const statusResponse = await updateBookingStatus(
         bookingId as string,
         "awaiting-customer-approval",
         {
@@ -275,13 +337,24 @@ const BookingDetailsScreen = () => {
         }
       );
 
-      Alert.alert(
-        "Success",
-        "Work marked as complete. Waiting for customer approval."
-      );
-      setShowWorkCompletionModal(false);
-      setShowActualHoursModal(false);
-      fetchBookingDetails();
+      if (statusResponse.success) {
+        Alert.alert(
+          "Success",
+          "Work marked as complete. Waiting for customer approval."
+        );
+        setShowWorkCompletionModal(false);
+        setShowActualHoursModal(false);
+
+        // Reset states
+        setActualHours("");
+        setBeforePhotos([]);
+        setAfterPhotos([]);
+        setWorkNotes("");
+
+        fetchBookingDetails();
+      } else {
+        Alert.alert("Error", statusResponse.error || "Failed to complete work");
+      }
     } catch (err) {
       console.error("Error completing work:", err);
       Alert.alert("Error", "Failed to complete work");
@@ -428,7 +501,6 @@ const BookingDetailsScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View
           className={`mx-6 mt-6 p-4 rounded-2xl border ${getStatusColor(
@@ -862,6 +934,24 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
 
+        {/* 🆕 ADD THIS SECTION HERE - Allow adding photos after completion */}
+        {(booking.status === "awaiting-customer-approval" ||
+          booking.status === "completed") && (
+          <View className="mx-6 mt-4">
+            <TouchableOpacity
+              onPress={() => setShowWorkCompletionModal(true)}
+              className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex-row items-center justify-center"
+            >
+              <Ionicons name="camera-outline" size={20} color="#3b82f6" />
+              <Text className="text-blue-600 font-semibold ml-2">
+                {booking.workDocumentation
+                  ? "Add More Photos"
+                  : "Add Work Photos"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View className="mx-6 mt-4 mb-6 bg-gray-100 rounded-2xl p-4">
           <Text className="text-xs text-gray-500 mb-1">Booking ID</Text>
           <Text className="text-sm font-mono font-semibold text-gray-800">
@@ -869,7 +959,6 @@ const BookingDetailsScreen = () => {
           </Text>
         </View>
       </ScrollView>
-
       {/* Action Buttons */}
       {booking.status === "pending" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
@@ -899,7 +988,6 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
       )}
-
       {booking.status === "confirmed" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <View className="flex-row gap-3">
@@ -929,7 +1017,6 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
       )}
-
       {booking.status === "on-the-way" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <TouchableOpacity
@@ -950,7 +1037,6 @@ const BookingDetailsScreen = () => {
           </TouchableOpacity>
         </View>
       )}
-
       {booking.status === "arrived" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <TouchableOpacity
@@ -971,7 +1057,6 @@ const BookingDetailsScreen = () => {
           </TouchableOpacity>
         </View>
       )}
-
       {booking.status === "in-progress" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <TouchableOpacity
@@ -988,7 +1073,6 @@ const BookingDetailsScreen = () => {
           </TouchableOpacity>
         </View>
       )}
-
       {booking.status === "awaiting-customer-approval" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <View className="bg-orange-50 border border-orange-200 p-4 rounded-xl">
@@ -1001,7 +1085,6 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
       )}
-
       {booking.status === "completed" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <View className="bg-green-50 border border-green-200 p-4 rounded-xl">
@@ -1014,7 +1097,6 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
       )}
-
       {booking.status === "disputed" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <View className="bg-pink-50 border border-pink-200 p-4 rounded-xl">
@@ -1033,7 +1115,6 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
       )}
-
       {booking.status === "cancelled" && (
         <View className="bg-white px-6 py-4 border-t border-gray-200">
           <View className="bg-red-50 border border-red-200 p-4 rounded-xl">
@@ -1046,7 +1127,6 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
       )}
-
       {/* Cancel Modal */}
       <Modal
         visible={showCancelModal}
@@ -1098,7 +1178,6 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
       </Modal>
-
       <Modal
         visible={showActualHoursModal}
         transparent={true}
@@ -1138,7 +1217,13 @@ const BookingDetailsScreen = () => {
                 </View>
 
                 <TouchableOpacity
-                  onPress={() => setShowWorkCompletionModal(true)}
+                  onPress={() => {
+                    setShowActualHoursModal(false);
+
+                    setTimeout(() => {
+                      setShowWorkCompletionModal(true);
+                    }, 400);
+                  }}
                   className="bg-blue-50 border border-blue-200 py-3 rounded-xl mb-4"
                 >
                   <View className="flex-row items-center justify-center">
@@ -1150,11 +1235,65 @@ const BookingDetailsScreen = () => {
                 </TouchableOpacity>
 
                 {(beforePhotos.length > 0 || afterPhotos.length > 0) && (
-                  <View className="bg-gray-50 rounded-xl p-3 mb-4">
-                    <Text className="text-xs text-gray-600">
-                      📸 {beforePhotos.length} before photos,{" "}
-                      {afterPhotos.length} after photos added
-                    </Text>
+                  <View className="mb-4">
+                    <View className="flex-row items-center justify-between mb-2">
+                      <Text className="text-sm font-semibold text-gray-700">
+                        Attached Photos
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setShowActualHoursModal(false);
+                          setTimeout(
+                            () => setShowWorkCompletionModal(true),
+                            400
+                          );
+                        }}
+                      >
+                        <Text className="text-blue-600 text-xs font-semibold">
+                          Edit Photos
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      className="flex-row"
+                    >
+                      {beforePhotos.map((photo, index) => (
+                        <View
+                          key={`pre-before-${index}`}
+                          className="mr-2 relative"
+                        >
+                          <Image
+                            source={{ uri: photo }}
+                            className="w-16 h-16 rounded-lg border border-gray-200"
+                          />
+                          <View className="absolute bottom-0 left-0 right-0 bg-black/40 rounded-b-lg">
+                            <Text className="text-[8px] text-white text-center">
+                              Before
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+
+                      {afterPhotos.map((photo, index) => (
+                        <View
+                          key={`pre-after-${index}`}
+                          className="mr-2 relative"
+                        >
+                          <Image
+                            source={{ uri: photo }}
+                            className="w-16 h-16 rounded-lg border border-blue-200"
+                          />
+                          <View className="absolute bottom-0 left-0 right-0 bg-blue-600/60 rounded-b-lg">
+                            <Text className="text-[8px] text-white text-center">
+                              After
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </ScrollView>
                   </View>
                 )}
 
@@ -1191,7 +1330,6 @@ const BookingDetailsScreen = () => {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Work Completion Photos Modal */}
       <Modal
         visible={showWorkCompletionModal}
         transparent={true}
@@ -1204,31 +1342,116 @@ const BookingDetailsScreen = () => {
               <Text className="text-xl font-bold text-gray-800">
                 Work Documentation
               </Text>
+
               <TouchableOpacity
-                onPress={() => setShowWorkCompletionModal(false)}
+                onPress={() => {
+                  setShowWorkCompletionModal(false);
+
+                  setTimeout(() => {
+                    setShowActualHoursModal(true);
+                  }, 400);
+                }}
+                className="bg-blue-600 py-4 rounded-xl mt-2"
+                disabled={uploadingPhotos}
               >
-                <Ionicons name="close" size={24} color="#6b7280" />
+                <Text className="text-center text-white font-bold p-2">
+                  Save Photos
+                </Text>
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Before Photos Section */}
               <View className="mb-6">
-                <Text className="text-sm font-semibold text-gray-700 mb-2">
+                <Text className="text-sm font-semibold text-gray-700 mb-3">
                   Before Photos
                 </Text>
+
+                {/* Gallery Button */}
                 <TouchableOpacity
-                  onPress={() => pickImage("before")}
+                  onPress={async () => {
+                    try {
+                      setUploadingPhotos(true);
+                      const imageUris = await pickMultipleImages(
+                        5 - beforePhotos.length
+                      );
+
+                      if (imageUris.length > 0) {
+                        const base64Promises = imageUris.map((uri) =>
+                          convertImageToBase64(uri)
+                        );
+                        const base64Images = await Promise.all(base64Promises);
+                        setBeforePhotos([...beforePhotos, ...base64Images]);
+                        Alert.alert(
+                          "Success",
+                          `${base64Images.length} photo(s) added`
+                        );
+                      }
+                    } catch (error) {
+                      console.error("Error picking images:", error);
+                      Alert.alert("Error", "Failed to pick images");
+                    } finally {
+                      setUploadingPhotos(false);
+                    }
+                  }}
+                  disabled={uploadingPhotos}
                   className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-4 mb-2"
                 >
                   <View className="items-center">
-                    <Ionicons name="camera-outline" size={32} color="#9ca3af" />
+                    <Ionicons name="images-outline" size={32} color="#9ca3af" />
                     <Text className="text-gray-600 text-sm mt-2">
-                      Add Before Photos
+                      Choose from Gallery
                     </Text>
                   </View>
                 </TouchableOpacity>
+
+                {/* Camera Button */}
+                <TouchableOpacity
+                  onPress={async () => {
+                    try {
+                      setUploadingPhotos(true);
+                      const photoUri = await takePhoto();
+
+                      if (photoUri) {
+                        const base64 = await convertImageToBase64(photoUri);
+                        setBeforePhotos([...beforePhotos, base64]);
+                        Alert.alert("Success", "Photo added successfully");
+                      }
+                    } catch (error) {
+                      console.error("Error taking photo:", error);
+                      Alert.alert("Error", "Failed to take photo");
+                    } finally {
+                      setUploadingPhotos(false);
+                    }
+                  }}
+                  disabled={uploadingPhotos}
+                  className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-2"
+                >
+                  <View className="items-center">
+                    <Ionicons name="camera-outline" size={32} color="#3b82f6" />
+                    <Text className="text-blue-600 text-sm mt-2">
+                      Take Photo
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Loading Indicator */}
+                {uploadingPhotos && (
+                  <View className="items-center py-2">
+                    <ActivityIndicator size="small" color="#3b82f6" />
+                    <Text className="text-gray-600 text-xs mt-1">
+                      Processing photo...
+                    </Text>
+                  </View>
+                )}
+
+                {/* Display selected before photos */}
                 {beforePhotos.length > 0 && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    className="mt-3"
+                  >
                     {beforePhotos.map((photo, index) => (
                       <View key={index} className="mr-2 relative">
                         <Image
@@ -1251,23 +1474,87 @@ const BookingDetailsScreen = () => {
                 )}
               </View>
 
+              {/* After Photos Section */}
               <View className="mb-6">
-                <Text className="text-sm font-semibold text-gray-700 mb-2">
+                <Text className="text-sm font-semibold text-gray-700 mb-3">
                   After Photos
                 </Text>
+
+                {/* Gallery Button */}
                 <TouchableOpacity
-                  onPress={() => pickImage("after")}
+                  onPress={async () => {
+                    try {
+                      setUploadingPhotos(true);
+                      const imageUris = await pickMultipleImages(
+                        5 - afterPhotos.length
+                      );
+
+                      if (imageUris.length > 0) {
+                        const base64Promises = imageUris.map((uri) =>
+                          convertImageToBase64(uri)
+                        );
+                        const base64Images = await Promise.all(base64Promises);
+                        setAfterPhotos([...afterPhotos, ...base64Images]);
+                        Alert.alert(
+                          "Success",
+                          `${base64Images.length} photo(s) added`
+                        );
+                      }
+                    } catch (error) {
+                      console.error("Error picking images:", error);
+                      Alert.alert("Error", "Failed to pick images");
+                    } finally {
+                      setUploadingPhotos(false);
+                    }
+                  }}
+                  disabled={uploadingPhotos}
                   className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-4 mb-2"
                 >
                   <View className="items-center">
-                    <Ionicons name="camera-outline" size={32} color="#9ca3af" />
+                    <Ionicons name="images-outline" size={32} color="#9ca3af" />
                     <Text className="text-gray-600 text-sm mt-2">
-                      Add After Photos
+                      Choose from Gallery
                     </Text>
                   </View>
                 </TouchableOpacity>
+
+                {/* Camera Button */}
+                <TouchableOpacity
+                  onPress={async () => {
+                    try {
+                      setUploadingPhotos(true);
+                      const photoUri = await takePhoto();
+
+                      if (photoUri) {
+                        const base64 = await convertImageToBase64(photoUri);
+                        setAfterPhotos([...afterPhotos, base64]);
+                        Alert.alert("Success", "Photo added successfully");
+                      }
+                    } catch (error) {
+                      console.error("Error taking photo:", error);
+                      Alert.alert("Error", "Failed to take photo");
+                    } finally {
+                      setUploadingPhotos(false);
+                    }
+                  }}
+                  disabled={uploadingPhotos}
+                  className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-2"
+                >
+                  <View className="items-center">
+                    <Ionicons name="camera-outline" size={32} color="#3b82f6" />
+                    <Text className="text-blue-600 text-sm mt-2">
+                      Take Photo
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Display selected after photos */}
                 {afterPhotos.length > 0 && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    className="mt-3"
+                  >
                     {afterPhotos.map((photo, index) => (
                       <View key={index} className="mr-2 relative">
                         <Image
@@ -1290,6 +1577,7 @@ const BookingDetailsScreen = () => {
                 )}
               </View>
 
+              {/* Work Notes */}
               <View className="mb-4">
                 <Text className="text-sm font-semibold text-gray-700 mb-2">
                   Work Notes (Optional)
@@ -1305,17 +1593,9 @@ const BookingDetailsScreen = () => {
                 />
               </View>
             </ScrollView>
-
-            <TouchableOpacity
-              onPress={() => setShowWorkCompletionModal(false)}
-              className="bg-blue-600 py-4 rounded-xl mt-2"
-            >
-              <Text className="text-center text-white font-bold">Done</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
-
       {/* Image Viewer Modal */}
       <Modal
         visible={showImageViewer}

@@ -293,7 +293,7 @@ router.put(
   async (req: AuthRequest, res) => {
     try {
       const { bookingId } = req.params;
-      const { status } = req.body;
+      const { status, actualHours } = req.body;
 
       const booking = await Booking.findById(bookingId);
 
@@ -318,8 +318,32 @@ router.put(
       const oldStatus = booking.status;
       booking.status = status;
 
-      if (status === "completed") {
+      // ADD: Update actual hours and calculate final amount
+      if (actualHours && status === "awaiting-customer-approval") {
+        booking.pricing.actualHours = actualHours;
+        const serviceFee = booking.pricing.hourlyRate * actualHours;
+        booking.pricing.finalAmount = serviceFee + booking.pricing.platformFee;
+      }
+
+      // Update timeline based on status
+      if (status === "confirmed" && !booking.timeline.confirmedAt) {
+        booking.timeline.confirmedAt = new Date();
+      } else if (status === "on-the-way" && !booking.timeline.startedTravelAt) {
+        booking.timeline.startedTravelAt = new Date();
+      } else if (status === "arrived" && !booking.timeline.arrivedAt) {
+        booking.timeline.arrivedAt = new Date();
+      } else if (status === "in-progress" && !booking.timeline.workStartedAt) {
+        booking.timeline.workStartedAt = new Date();
+      } else if (
+        status === "awaiting-customer-approval" &&
+        !booking.timeline.workCompletedAt
+      ) {
+        booking.timeline.workCompletedAt = new Date();
+      } else if (status === "completed") {
         booking.completedAt = new Date();
+        if (!booking.timeline.customerApprovedAt) {
+          booking.timeline.customerApprovedAt = new Date();
+        }
       }
 
       await booking.save();
@@ -610,6 +634,75 @@ router.put(
       });
     } catch (error: any) {
       console.error("Error disputing booking:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+);
+
+router.post(
+  "/:bookingId/work-documentation",
+  authenticateUser,
+  async (req: AuthRequest, res) => {
+    try {
+      const { bookingId } = req.params;
+      const { beforePhotos, afterPhotos, workNotes } = req.body;
+
+      const booking = await Booking.findById(bookingId);
+
+      if (!booking) {
+        return res.status(404).json({
+          success: false,
+          error: "Booking not found",
+        });
+      }
+
+      // Only provider can add work documentation
+      if (booking.providerId !== req.user?.uid) {
+        return res.status(403).json({
+          success: false,
+          error: "Only provider can add work documentation",
+        });
+      }
+
+      // Initialize workDocumentation if it doesn't exist
+      if (!booking.workDocumentation) {
+        booking.workDocumentation = {
+          beforePhotos: [],
+          afterPhotos: [],
+        };
+      }
+
+      // Update work documentation
+      if (beforePhotos && Array.isArray(beforePhotos)) {
+        booking.workDocumentation.beforePhotos = [
+          ...booking.workDocumentation.beforePhotos,
+          ...beforePhotos,
+        ];
+      }
+
+      if (afterPhotos && Array.isArray(afterPhotos)) {
+        booking.workDocumentation.afterPhotos = [
+          ...booking.workDocumentation.afterPhotos,
+          ...afterPhotos,
+        ];
+      }
+
+      if (workNotes) {
+        booking.workDocumentation.workNotes = workNotes;
+      }
+
+      await booking.save();
+
+      res.json({
+        success: true,
+        message: "Work documentation updated",
+        data: booking,
+      });
+    } catch (error: any) {
+      console.error("Error updating work documentation:", error);
       res.status(500).json({
         success: false,
         error: error.message,
