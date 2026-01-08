@@ -1,7 +1,8 @@
 import { Server } from "socket.io";
 import { AuthenticatedSocket } from "../middleware/socketAuthMiddleware";
+import { Conversation } from "../models/Conversation";
 import Customer from "../models/Customer";
-import { Conversation, Message } from "../models/Message";
+import { Message } from "../models/Message";
 import Provider from "../models/Provider";
 import User from "../models/User";
 

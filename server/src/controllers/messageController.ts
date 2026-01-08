@@ -1,12 +1,19 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/authMiddleware";
+import { Conversation } from "../models/Conversation";
 import Customer from "../models/Customer";
-import { Conversation, Message } from "../models/Message";
+import { Message } from "../models/Message";
 import Provider from "../models/Provider";
 import User from "../models/User";
 
 // Helper function to get user details
-const getUserDetails = async (userId: string) => {
+const getUserDetails = async (
+  userId: string
+): Promise<{
+  name: string;
+  photo: string | null;
+  userType: "customer" | "provider";
+} | null> => {
   const user = await User.findOne({ userId });
 
   if (!user) {
@@ -20,7 +27,7 @@ const getUserDetails = async (userId: string) => {
     return customer
       ? {
           name: customer.name,
-          photo: customer.profilePhoto,
+          photo: customer.profilePhoto || null,
           userType: "customer" as const,
         }
       : null;
@@ -31,7 +38,7 @@ const getUserDetails = async (userId: string) => {
     return provider
       ? {
           name: provider.name,
-          photo: provider.profilePhoto,
+          photo: provider.profilePhoto || null,
           userType: "provider" as const,
         }
       : null;
@@ -53,13 +60,29 @@ export const createConversation = async (req: AuthRequest, res: Response) => {
     });
 
     if (existingConv) {
+      // Fetch fresh user details for the response
+      const [currentUserDetails, otherUserDetails] = await Promise.all([
+        getUserDetails(currentUserId),
+        getUserDetails(otherUserId),
+      ]);
+
       return res.json({
         conversationId: existingConv._id,
-        ...existingConv.toObject(),
+        _id: existingConv._id,
+        participantIds: existingConv.participantIds,
+        participants: {
+          [currentUserId]: currentUserDetails,
+          [otherUserId]: otherUserDetails,
+        },
+        lastMessage: existingConv.lastMessage,
+        lastMessageTime: existingConv.lastMessageTime,
+        unreadCount: Object.fromEntries(existingConv.unreadCount),
+        createdAt: existingConv.createdAt,
+        updatedAt: existingConv.updatedAt,
       });
     }
 
-    // Fetch user details
+    // Verify both users exist
     const [currentUserDetails, otherUserDetails] = await Promise.all([
       getUserDetails(currentUserId),
       getUserDetails(otherUserId),
@@ -75,13 +98,9 @@ export const createConversation = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: "Other user not found" });
     }
 
-    // Create new conversation
+    // Create new conversation - ONLY store participantIds
     const conversation = await Conversation.create({
       participantIds: [currentUserId, otherUserId],
-      participants: {
-        [currentUserId]: currentUserDetails,
-        [otherUserId]: otherUserDetails,
-      },
       lastMessage: null,
       lastMessageTime: new Date(),
       unreadCount: {
@@ -90,9 +109,20 @@ export const createConversation = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    // Return response with dynamically fetched user details
     res.json({
       conversationId: conversation._id,
-      ...conversation.toObject(),
+      _id: conversation._id,
+      participantIds: conversation.participantIds,
+      participants: {
+        [currentUserId]: currentUserDetails,
+        [otherUserId]: otherUserDetails,
+      },
+      lastMessage: conversation.lastMessage,
+      lastMessageTime: conversation.lastMessageTime,
+      unreadCount: Object.fromEntries(conversation.unreadCount),
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
     });
   } catch (error: any) {
     console.error("Create conversation error:", error);
@@ -104,13 +134,46 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.uid;
 
+    // Fetch conversations
     const conversations = await Conversation.find({
       participantIds: userId,
     })
       .sort({ lastMessageTime: -1 })
       .lean();
 
-    res.json(conversations);
+    // Dynamically fetch participant details for each conversation
+    const conversationsWithDetails = await Promise.all(
+      conversations.map(async (conversation) => {
+        const participants: {
+          [key: string]: {
+            name: string;
+            photo: string | null;
+            userType: "provider" | "customer";
+          };
+        } = {};
+
+        // Fetch details for each participant
+        for (const participantId of conversation.participantIds) {
+          const userDetails = await getUserDetails(participantId);
+          if (userDetails) {
+            participants[participantId] = userDetails;
+          }
+        }
+
+        return {
+          _id: conversation._id,
+          participantIds: conversation.participantIds,
+          participants, // Fresh data from Customer/Provider collections
+          lastMessage: conversation.lastMessage,
+          lastMessageTime: conversation.lastMessageTime,
+          unreadCount: conversation.unreadCount,
+          createdAt: conversation.createdAt,
+          updatedAt: conversation.updatedAt,
+        };
+      })
+    );
+
+    res.json(conversationsWithDetails);
   } catch (error: any) {
     console.error("Get conversations error:", error);
     res.status(500).json({ message: error.message });

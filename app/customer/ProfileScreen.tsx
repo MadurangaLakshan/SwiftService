@@ -24,12 +24,6 @@ interface MenuItem {
   route: string;
 }
 
-interface Stat {
-  label: string;
-  value: string;
-  icon: keyof typeof Ionicons.glyphMap;
-}
-
 const ProfileScreen: React.FC = () => {
   const { customerData, loading, refreshCustomerData } = useCustomer();
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -91,12 +85,6 @@ const ProfileScreen: React.FC = () => {
       color: "#6b7280",
       route: "/customer/PrivacyScreen",
     },
-  ];
-
-  const stats: Stat[] = [
-    { label: "Bookings", value: "24", icon: "calendar" },
-    { label: "Reviews", value: "12", icon: "star" },
-    { label: "Favorites", value: "8", icon: "heart" },
   ];
 
   const handleChangeProfilePicture = async () => {
@@ -224,26 +212,6 @@ const ProfileScreen: React.FC = () => {
               {customerData?.phone}
             </Text>
           </View>
-        </View>
-
-        {/* Stats Section */}
-        <View className="flex-row mx-6 -mt-6 bg-white rounded-2xl shadow-sm border border-gray-200">
-          {stats.map((stat, index) => (
-            <View
-              key={index}
-              className={`flex-1 py-4 items-center ${
-                index !== stats.length - 1 ? "border-r border-gray-200" : ""
-              }`}
-            >
-              <View className="flex-row items-center mb-1">
-                <Ionicons name={stat.icon} size={16} color="#3b82f6" />
-                <Text className="text-2xl font-bold text-gray-800 ml-1">
-                  {stat.value}
-                </Text>
-              </View>
-              <Text className="text-sm text-gray-500">{stat.label}</Text>
-            </View>
-          ))}
         </View>
 
         {/* Account Section */}
