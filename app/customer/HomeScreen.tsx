@@ -496,7 +496,7 @@ const HomeScreen = () => {
                             </Text>
                           </View>
                           <Text className="text-sm font-semibold text-blue-600">
-                            ${provider.hourlyRate}/hr
+                            LKR: {provider.hourlyRate}/hr
                           </Text>
                         </View>
                       </View>

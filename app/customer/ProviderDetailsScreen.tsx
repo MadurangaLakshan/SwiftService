@@ -394,7 +394,9 @@ const ProviderDetailsScreen = () => {
           </Text>
           <View className="flex-row items-center justify-between">
             <Text className="text-gray-600">Hourly Rate</Text>
-            <Text className="text-2xl font-bold text-blue-600">{price}</Text>
+            <Text className="text-2xl font-bold text-blue-600">
+              LKR: {price}
+            </Text>
           </View>
 
           {totalJobs !== undefined && (
@@ -410,9 +412,7 @@ const ProviderDetailsScreen = () => {
             <View className="mt-3 pt-3 border-t border-gray-100">
               <View className="flex-row items-center">
                 <Ionicons name="location-outline" size={16} color="#6b7280" />
-                <Text className="text-gray-600 ml-1">
-                  {locationData.city}, {locationData.postalCode}
-                </Text>
+                <Text className="text-gray-600 ml-1">{locationData.city}</Text>
               </View>
               <Text className="text-xs text-gray-500 mt-1">
                 Service radius: {locationData.serviceRadius || 10} km

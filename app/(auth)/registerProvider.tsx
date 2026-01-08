@@ -592,7 +592,7 @@ export default function RegisterProvider() {
       />
 
       <View className="flex-row items-center w-full border p-3 rounded mb-1 border-gray-300">
-        <Text className="text-gray-600 mr-2">$</Text>
+        <Text className="text-gray-600 mr-2">LKR</Text>
         <TextInput
           placeholder="Hourly Rate"
           placeholderTextColor={colors.gray[500]}
