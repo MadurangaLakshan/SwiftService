@@ -16,7 +16,6 @@ const authenticatedRequest = async (
     }
 
     const url = `${API_URL}${endpoint}`;
-    console.log("Making request to:", url);
 
     const response = await fetch(url, {
       ...options,
@@ -28,7 +27,6 @@ const authenticatedRequest = async (
     });
 
     const data = await response.json();
-    console.log("Response:", { status: response.status, data });
 
     if (!response.ok) {
       throw new Error(data.error || data.message || "Request failed");

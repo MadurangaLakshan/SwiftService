@@ -114,7 +114,6 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     ).length;
 
     set({ unreadCount: totalUnread });
-    console.log("🔔 Updated badge count:", totalUnread);
   },
 
   initializeSocketListeners: () => {

@@ -10,11 +10,11 @@ import customerRoutes from "./routes/customerRoutes";
 import locationRoutes from "./routes/locationRoutes";
 import messageRoutes from "./routes/messageRoute";
 import notificationRoutes from "./routes/notificationRoutes";
+import paymentRoutes from "./routes/paymentRoutes";
 import providerRoutes from "./routes/providerRoutes";
 import reviewRoutes from "./routes/reviewRoutes";
 import userRoutes from "./routes/userRoutes";
 import { handleSocketConnection } from "./socket/messageSocket";
-
 dotenv.config();
 
 const app = express();
@@ -44,6 +44,11 @@ app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+app.use((req, res, next) => {
+  console.log(`Incoming Request: ${req.method} ${req.url}`);
+  next();
+});
+
 app.use("/api/providers", providerRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/users", userRoutes);
@@ -52,6 +57,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/location", locationRoutes);
+app.use("/api/payment", paymentRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "OK", message: "Server is running" });

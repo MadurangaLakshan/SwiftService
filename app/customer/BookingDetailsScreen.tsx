@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -22,6 +23,9 @@ import {
   getBookingById,
   submitBookingReview,
 } from "../services/apiService";
+
+import PaymentSection from "./PaymentSection";
+
 import TrackingScreen from "./TrackingScreen";
 
 type BookingStatus =
@@ -89,6 +93,19 @@ interface Booking {
     description: string;
     status: "open" | "resolved" | "escalated";
   };
+  // ADD THESE PAYMENT FIELDS:
+  paymentCompleted?: boolean;
+  payment?: {
+    orderId?: string;
+    paymentIntentId?: string;
+    clientSecret?: string;
+    status: "pending" | "completed" | "failed";
+    amount?: number;
+    currency?: string;
+    createdAt?: string;
+    completedAt?: string;
+  };
+
   createdAt: string;
   updatedAt: string;
 }
@@ -96,7 +113,8 @@ interface Booking {
 const BookingDetailsScreen = () => {
   const params = useLocalSearchParams();
   const { bookingId } = params;
-
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentURL, setPaymentURL] = useState("");
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -104,7 +122,7 @@ const BookingDetailsScreen = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showDisputeModal, setShowDisputeModal] = useState(false);
-  const [showTrackingModal, setShowTrackingModal] = useState(false); // NEW
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [rating, setRating] = useState(0);
   const [cancelReason, setCancelReason] = useState("");
   const [reviewText, setReviewText] = useState("");
@@ -1022,6 +1040,11 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
       )}
+
+      <PaymentSection
+        booking={booking}
+        onPaymentSuccess={fetchBookingDetails}
+      />
 
       {/* Modals */}
       <Modal

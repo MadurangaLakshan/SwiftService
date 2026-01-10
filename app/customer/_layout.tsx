@@ -170,6 +170,12 @@ export default function CustomerLayout() {
             href: null,
           }}
         />
+        <Tabs.Screen
+          name="PaymentSection"
+          options={{
+            href: null,
+          }}
+        />
       </Tabs>
     </CustomerProvider>
   );

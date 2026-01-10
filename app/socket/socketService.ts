@@ -130,7 +130,6 @@ class SocketService {
   joinConversations(conversationIds: string[]) {
     if (this.socket?.connected) {
       this.socket.emit("join-conversations", conversationIds);
-      console.log(`Joined ${conversationIds.length} conversations`);
     } else {
       console.warn("Cannot join conversations: Socket not connected");
     }

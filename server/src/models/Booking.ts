@@ -92,6 +92,17 @@ export interface IBooking extends Document {
     resolution?: string;
     resolvedAt?: Date;
   };
+  paymentCompleted?: boolean;
+  payment?: {
+    orderId?: string;
+    paymentIntentId?: string;
+    clientSecret?: string;
+    status: "pending" | "completed" | "failed";
+    amount?: number;
+    currency?: string;
+    createdAt?: string;
+    completedAt?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -275,6 +286,32 @@ const BookingSchema: Schema = new Schema(
       },
       resolution: { type: String },
       resolvedAt: { type: Date },
+    },
+    paymentCompleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    payment: {
+      orderId: { type: String },
+      paymentIntentId: {
+        type: String,
+        index: true,
+        sparse: true,
+      },
+      clientSecret: { type: String },
+      status: {
+        type: String,
+        enum: ["pending", "completed", "failed"],
+        default: "pending",
+      },
+      amount: { type: Number },
+      currency: {
+        type: String,
+        default: "lkr",
+      },
+      createdAt: { type: String },
+      completedAt: { type: String },
     },
   },
   {
