@@ -1,4 +1,3 @@
-// backend/routes/paymentRoutes.ts
 import { Response, Router } from "express";
 import Stripe from "stripe";
 import { authenticateUser, AuthRequest } from "../middleware/authMiddleware";

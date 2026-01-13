@@ -1,20 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
   Modal,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import MapView, { Marker, Region } from "react-native-maps";
+import MapView, { Marker, PROVIDER_GOOGLE, Region } from "react-native-maps";
 import colors from "tailwindcss/colors";
 import {
+  Coordinates,
   geocodeAddress,
   getCurrentLocation,
-  Coordinates,
   validateAddress,
 } from "../utils/locationUtils";
 
@@ -170,7 +170,10 @@ const AddressPickerWithMap: React.FC<AddressPickerProps> = ({
         "Your exact location has been saved. This will help provide accurate distance calculations."
       );
     } else {
-      Alert.alert("No Location Selected", "Please tap on the map to set your location.");
+      Alert.alert(
+        "No Location Selected",
+        "Please tap on the map to set your location."
+      );
     }
   };
 
@@ -249,7 +252,8 @@ const AddressPickerWithMap: React.FC<AddressPickerProps> = ({
             </Text>
           </View>
           <Text className="text-xs text-green-600 mt-1">
-            Lat: {markerCoords.latitude.toFixed(6)}, Lng: {markerCoords.longitude.toFixed(6)}
+            Lat: {markerCoords.latitude.toFixed(6)}, Lng:{" "}
+            {markerCoords.longitude.toFixed(6)}
           </Text>
         </View>
       )}
@@ -282,6 +286,7 @@ const AddressPickerWithMap: React.FC<AddressPickerProps> = ({
 
           {/* Map */}
           <MapView
+            provider={PROVIDER_GOOGLE}
             ref={mapRef}
             style={{ flex: 1 }}
             initialRegion={mapRegion}
@@ -317,7 +322,11 @@ const AddressPickerWithMap: React.FC<AddressPickerProps> = ({
                   <ActivityIndicator size="small" color={colors.gray[700]} />
                 ) : (
                   <>
-                    <Ionicons name="search" size={20} color={colors.gray[700]} />
+                    <Ionicons
+                      name="search"
+                      size={20}
+                      color={colors.gray[700]}
+                    />
                     <Text className="text-gray-700 font-semibold ml-2">
                       Find Address
                     </Text>
@@ -334,7 +343,11 @@ const AddressPickerWithMap: React.FC<AddressPickerProps> = ({
                   <ActivityIndicator size="small" color={colors.gray[700]} />
                 ) : (
                   <>
-                    <Ionicons name="navigate" size={20} color={colors.gray[700]} />
+                    <Ionicons
+                      name="navigate"
+                      size={20}
+                      color={colors.gray[700]}
+                    />
                     <Text className="text-gray-700 font-semibold ml-2">
                       Use GPS
                     </Text>
@@ -351,11 +364,7 @@ const AddressPickerWithMap: React.FC<AddressPickerProps> = ({
                 markerCoords ? "bg-blue-500" : "bg-gray-300"
               }`}
             >
-              <Ionicons
-                name="checkmark-circle"
-                size={24}
-                color="white"
-              />
+              <Ionicons name="checkmark-circle" size={24} color="white" />
               <Text className="text-white font-bold text-lg ml-2">
                 Confirm Location
               </Text>
