@@ -129,6 +129,17 @@ const HomeScreen = () => {
     "Landscaping",
   ];
 
+  const CATEGORY_MAP: Record<string, string> = {
+    All: "All",
+    Electrical: "electrician", // Database might use 'electrician'
+    Plumbing: "plumber", // Your specific case
+    Construction: "construction",
+    Carpentry: "carpenter",
+    Painting: "painter",
+    HVAC: "hvac",
+    Landscaping: "landscaper",
+  };
+
   useEffect(() => {
     fetchProviders();
   }, []);
@@ -169,23 +180,26 @@ const HomeScreen = () => {
 
     // Category filter
     if (selectedCategory !== "All") {
+      const dbValue = (
+        CATEGORY_MAP[selectedCategory] || selectedCategory
+      ).toLowerCase();
+
       filtered = filtered.filter(
         (provider) =>
-          provider.services.includes(selectedCategory) ||
-          provider.customServices.includes(selectedCategory)
+          provider.services.some((s) => s.toLowerCase() === dbValue) ||
+          provider.customServices.some((s) => s.toLowerCase() === dbValue)
       );
     }
 
     // Search filter
-    if (searchQuery !== "") {
+    if (searchQuery.trim() !== "") {
+      const lowerQuery = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (provider) =>
-          provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          provider.services.some((service) =>
-            service.toLowerCase().includes(searchQuery.toLowerCase())
-          ) ||
-          provider.customServices.some((service) =>
-            service.toLowerCase().includes(searchQuery.toLowerCase())
+          provider.name.toLowerCase().includes(lowerQuery) ||
+          provider.services.some((s) => s.toLowerCase().includes(lowerQuery)) ||
+          provider.customServices.some((s) =>
+            s.toLowerCase().includes(lowerQuery)
           )
       );
     }
