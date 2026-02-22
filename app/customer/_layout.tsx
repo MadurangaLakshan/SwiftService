@@ -59,6 +59,21 @@ const MessagesIconWithBadge = ({ color }: { color: string }) => {
 };
 
 export default function CustomerLayout() {
+  const AIIcon = ({ color }: { color: string }) => {
+    return (
+      <View
+        style={{
+          width: 26,
+          height: 26,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Ionicons name="sparkles" size={24} color={color} />
+      </View>
+    );
+  };
+
   return (
     <CustomerProvider>
       <Tabs
@@ -77,14 +92,12 @@ export default function CustomerLayout() {
         }}
       >
         <Tabs.Screen
-          name="HomeScreen"
+          name="AiChatScreen"
           options={{
-            title: "Home",
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons name="home" size={26} color={color} />
-            ),
+            title: "AI Assistant",
+            tabBarIcon: ({ color }) => <AIIcon color={color} />,
             tabBarLabel: ({ color }) => (
-              <Text style={{ color, fontSize: 12, marginTop: 4 }}>Home</Text>
+              <Text style={{ color, fontSize: 12, marginTop: 4 }}>AI Help</Text>
             ),
           }}
         />
@@ -99,6 +112,19 @@ export default function CustomerLayout() {
               <Text style={{ color, fontSize: 12, marginTop: 4 }}>
                 Bookings
               </Text>
+            ),
+          }}
+        />
+
+        <Tabs.Screen
+          name="HomeScreen"
+          options={{
+            title: "Home",
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name="home" size={26} color={color} />
+            ),
+            tabBarLabel: ({ color }) => (
+              <Text style={{ color, fontSize: 12, marginTop: 4 }}>Home</Text>
             ),
           }}
         />

@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { connectDatabase } from "./config/database";
 import { authenticateSocket } from "./middleware/socketAuthMiddleware";
+import aiChatRoutes from "./routes/aiChatRoutes";
 import bookingRoutes from "./routes/bookingRoutes";
 import customerRoutes from "./routes/customerRoutes";
 import locationRoutes from "./routes/locationRoutes";
@@ -58,6 +59,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/ai-chat", aiChatRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "OK", message: "Server is running" });
