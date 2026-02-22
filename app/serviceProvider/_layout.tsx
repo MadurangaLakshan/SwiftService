@@ -77,14 +77,16 @@ export default function ProviderLayout() {
         }}
       >
         <Tabs.Screen
-          name="HomeScreen"
+          name="Dashboard"
           options={{
-            title: "Home",
+            title: "Dashboard",
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons name="home" size={26} color={color} />
+              <Ionicons name="bar-chart-outline" size={26} color={color} />
             ),
             tabBarLabel: ({ color }) => (
-              <Text style={{ color, fontSize: 12, marginTop: 4 }}>Home</Text>
+              <Text style={{ color, fontSize: 12, marginTop: 4 }}>
+                Dashboard
+              </Text>
             ),
           }}
         />
@@ -102,17 +104,16 @@ export default function ProviderLayout() {
             ),
           }}
         />
+
         <Tabs.Screen
-          name="Dashboard"
+          name="HomeScreen"
           options={{
-            title: "Dashboard",
+            title: "Home",
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons name="bar-chart-outline" size={26} color={color} />
+              <Ionicons name="home" size={26} color={color} />
             ),
             tabBarLabel: ({ color }) => (
-              <Text style={{ color, fontSize: 12, marginTop: 4 }}>
-                Dashboard
-              </Text>
+              <Text style={{ color, fontSize: 12, marginTop: 4 }}>Home</Text>
             ),
           }}
         />

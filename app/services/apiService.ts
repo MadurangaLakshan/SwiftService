@@ -7,7 +7,7 @@ const API_URL = __DEV__
 
 const authenticatedRequest = async (
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ) => {
   try {
     const token = await auth.currentUser?.getIdToken();
@@ -78,7 +78,7 @@ export const updateProviderProfile = async (userId: string, updates: any) => {
 
 export const updateProviderProfilePicture = async (
   userId: string,
-  imageUrl: string
+  imageUrl: string,
 ) => {
   try {
     const result = await authenticatedRequest(`/providers/${userId}`, {
@@ -103,7 +103,7 @@ export const updateProviderProfilePicture = async (
 
 export const updateCustomerProfilePicture = async (
   userId: string,
-  imageUrl: string
+  imageUrl: string,
 ) => {
   try {
     const result = await authenticatedRequest(`/customers/${userId}`, {
@@ -206,7 +206,7 @@ export const deleteCustomerProfile = async (userId: string) => {
   });
 };
 
-export const getBooking = async (bookingId: string) => {
+export const getBookingById = async (bookingId: string) => {
   return authenticatedRequest(`/bookings/${bookingId}`, {
     method: "GET",
   });
@@ -221,7 +221,7 @@ export const getProviderBookings = async (providerId: string) => {
 export const updateBookingStatus = async (
   bookingId: string,
   status: string,
-  additionalData?: any
+  additionalData?: any,
 ) => {
   return authenticatedRequest(`/bookings/${bookingId}/status`, {
     method: "PUT",
@@ -273,12 +273,6 @@ export const getCustomerBookings = async (customerId: string) => {
   });
 };
 
-export const getBookingById = async (bookingId: string) => {
-  return authenticatedRequest(`/bookings/${bookingId}`, {
-    method: "GET",
-  });
-};
-
 export const cancelBooking = async (bookingId: string, reason: string) => {
   return authenticatedRequest(`/bookings/${bookingId}/cancel`, {
     method: "PUT",
@@ -292,7 +286,7 @@ export const uploadWorkPhotos = async (
     beforePhotos: string[];
     afterPhotos: string[];
     workNotes?: string;
-  }
+  },
 ) => {
   return authenticatedRequest(`/bookings/${bookingId}/work-documentation`, {
     method: "POST",
@@ -311,7 +305,7 @@ export const disputeBooking = async (
   disputeData: {
     reason: string;
     description: string;
-  }
+  },
 ) => {
   return authenticatedRequest(`/bookings/${bookingId}/dispute`, {
     method: "PUT",
@@ -324,7 +318,7 @@ export const submitBookingReview = async (
   reviewData: {
     rating: number;
     review?: string;
-  }
+  },
 ) => {
   return authenticatedRequest(`/reviews/bookings/${bookingId}/review`, {
     method: "POST",
@@ -395,7 +389,7 @@ export const updateProviderLocation = async (
     longitude: number;
     heading?: number;
     speed?: number;
-  }
+  },
 ) => {
   try {
     const response = await authenticatedRequest(
@@ -403,7 +397,7 @@ export const updateProviderLocation = async (
       {
         method: "PUT",
         body: JSON.stringify(locationData),
-      }
+      },
     );
 
     return response;
@@ -423,7 +417,7 @@ export const getBookingTracking = async (bookingId: string) => {
       `/location/${bookingId}/tracking`,
       {
         method: "GET",
-      }
+      },
     );
 
     return response;
@@ -439,7 +433,7 @@ export const getBookingTracking = async (bookingId: string) => {
  * Call this when booking status changes to "on-the-way"
  */
 export const startLocationTracking = async (
-  bookingId: string
+  bookingId: string,
 ): Promise<Location.LocationSubscription | null> => {
   try {
     // Request permissions
@@ -468,7 +462,7 @@ export const startLocationTracking = async (
         } catch (error) {
           console.error("Error updating location:", error);
         }
-      }
+      },
     );
 
     return subscription;
@@ -483,7 +477,7 @@ export const startLocationTracking = async (
  * Call this when booking is completed/cancelled or when provider stops moving
  */
 export const stopLocationTracking = (
-  locationSubscription: Location.LocationSubscription | null
+  locationSubscription: Location.LocationSubscription | null,
 ) => {
   if (locationSubscription) {
     locationSubscription.remove();
