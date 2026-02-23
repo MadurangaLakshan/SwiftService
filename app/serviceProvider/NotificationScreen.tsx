@@ -61,14 +61,16 @@ const NotificationsScreen = () => {
       await markNotificationAsRead(notification._id);
       // Update local state
       setNotifications((prev) =>
-        prev.map((n) => (n._id === notification._id ? { ...n, read: true } : n))
+        prev.map((n) =>
+          n._id === notification._id ? { ...n, read: true } : n,
+        ),
       );
     }
 
     // Navigate based on notification type
     if (notification.type === "booking" && notification.relatedId) {
       router.push({
-        pathname: "/customer/BookingDetailsScreen",
+        pathname: "/serviceProvider/BookingDetailsScreen",
         params: { bookingId: notification.relatedId },
       });
     } else if (notification.type === "message" && notification.relatedId) {

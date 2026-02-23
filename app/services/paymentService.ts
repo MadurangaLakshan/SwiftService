@@ -54,7 +54,7 @@ const getFirebaseToken = async (): Promise<string | null> => {
  */
 export const createPaymentIntent = async (
   bookingId: string,
-  amount: number
+  amount: number,
 ): Promise<ApiResponse<PaymentIntentResponse>> => {
   try {
     const token = await getFirebaseToken();
@@ -77,7 +77,7 @@ export const createPaymentIntent = async (
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ bookingId, amount }),
-      }
+      },
     );
 
     const data = await response.json();
@@ -101,7 +101,7 @@ export const createPaymentIntent = async (
  */
 export const confirmPayment = async (
   paymentIntentId: string,
-  bookingId: string
+  bookingId: string,
 ): Promise<ApiResponse> => {
   try {
     const token = await getFirebaseToken();
@@ -144,7 +144,7 @@ export const confirmPayment = async (
  * Get payment status for a booking
  */
 export const getPaymentStatus = async (
-  bookingId: string
+  bookingId: string,
 ): Promise<ApiResponse<PaymentStatusResponse>> => {
   try {
     const token = await getFirebaseToken();
@@ -164,7 +164,7 @@ export const getPaymentStatus = async (
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
 
     const data = await response.json();
