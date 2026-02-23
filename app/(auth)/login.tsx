@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import colors from "tailwindcss/colors";
 import { auth } from "../config/firebase";
-import { getUserType } from "../services/apiService";
+import { getUserType } from "../services/userService";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -50,7 +50,7 @@ export default function LoginScreen() {
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
-        password
+        password,
       );
 
       const userId = userCredential.user.uid;

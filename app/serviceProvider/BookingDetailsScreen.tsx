@@ -16,14 +16,17 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+
 import {
   cancelBooking,
   getBookingById,
-  startLocationTracking,
-  stopLocationTracking,
   updateBookingStatus,
   uploadWorkPhotos,
-} from "../services/apiService";
+} from "../services/bookingService";
+import {
+  startLocationTracking,
+  stopLocationTracking,
+} from "../services/locationService";
 import {
   convertImageToBase64,
   pickMultipleImages,
@@ -152,7 +155,7 @@ const BookingDetailsScreen = () => {
       console.error("❌ Failed to start tracking:", error);
       Alert.alert(
         "Location Error",
-        "Could not start location tracking. Please enable location services."
+        "Could not start location tracking. Please enable location services.",
       );
     }
   };
@@ -196,7 +199,7 @@ const BookingDetailsScreen = () => {
       setActionLoading(true);
       const response = await updateBookingStatus(
         bookingId as string,
-        newStatus
+        newStatus,
       );
 
       if (response.success) {
@@ -218,7 +221,7 @@ const BookingDetailsScreen = () => {
       setActionLoading(true);
       const response = await cancelBooking(
         bookingId as string,
-        "Cancelled by provider"
+        "Cancelled by provider",
       );
 
       if (response.success) {
@@ -295,7 +298,7 @@ const BookingDetailsScreen = () => {
         }
       },
       "Add Work Photo",
-      "Choose how you want to add photos"
+      "Choose how you want to add photos",
     );
   };
 
@@ -323,7 +326,7 @@ const BookingDetailsScreen = () => {
         if (!uploadResponse.success) {
           Alert.alert(
             "Warning",
-            "Photos upload failed, but continuing with completion"
+            "Photos upload failed, but continuing with completion",
           );
         }
       }
@@ -334,13 +337,13 @@ const BookingDetailsScreen = () => {
         "awaiting-customer-approval",
         {
           actualHours: parseFloat(actualHours),
-        }
+        },
       );
 
       if (statusResponse.success) {
         Alert.alert(
           "Success",
-          "Work marked as complete. Waiting for customer approval."
+          "Work marked as complete. Waiting for customer approval.",
         );
         setShowWorkCompletionModal(false);
         setShowActualHoursModal(false);
@@ -504,7 +507,7 @@ const BookingDetailsScreen = () => {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View
           className={`mx-6 mt-6 p-4 rounded-2xl border ${getStatusColor(
-            booking.status
+            booking.status,
           )}`}
         >
           <View className="flex-row items-center">
@@ -515,17 +518,17 @@ const BookingDetailsScreen = () => {
                 booking.status === "confirmed" || booking.status === "completed"
                   ? "#15803d"
                   : booking.status === "pending"
-                  ? "#a16207"
-                  : booking.status === "in-progress"
-                  ? "#7c3aed"
-                  : booking.status === "awaiting-customer-approval"
-                  ? "#ea580c"
-                  : booking.status === "on-the-way" ||
-                    booking.status === "arrived"
-                  ? "#4f46e5"
-                  : booking.status === "disputed"
-                  ? "#ec4899"
-                  : "#b91c1c"
+                    ? "#a16207"
+                    : booking.status === "in-progress"
+                      ? "#7c3aed"
+                      : booking.status === "awaiting-customer-approval"
+                        ? "#ea580c"
+                        : booking.status === "on-the-way" ||
+                            booking.status === "arrived"
+                          ? "#4f46e5"
+                          : booking.status === "disputed"
+                            ? "#ec4899"
+                            : "#b91c1c"
               }
             />
             <View className="ml-3 flex-1">
@@ -841,7 +844,7 @@ const BookingDetailsScreen = () => {
                         source={{ uri: photo }}
                         className="w-24 h-24 rounded-lg mr-2"
                       />
-                    )
+                    ),
                   )}
                 </ScrollView>
               </View>
@@ -1245,7 +1248,7 @@ const BookingDetailsScreen = () => {
                           setShowActualHoursModal(false);
                           setTimeout(
                             () => setShowWorkCompletionModal(true),
-                            400
+                            400,
                           );
                         }}
                       >
@@ -1373,18 +1376,18 @@ const BookingDetailsScreen = () => {
                     try {
                       setUploadingPhotos(true);
                       const imageUris = await pickMultipleImages(
-                        5 - beforePhotos.length
+                        5 - beforePhotos.length,
                       );
 
                       if (imageUris.length > 0) {
                         const base64Promises = imageUris.map((uri) =>
-                          convertImageToBase64(uri)
+                          convertImageToBase64(uri),
                         );
                         const base64Images = await Promise.all(base64Promises);
                         setBeforePhotos([...beforePhotos, ...base64Images]);
                         Alert.alert(
                           "Success",
-                          `${base64Images.length} photo(s) added`
+                          `${base64Images.length} photo(s) added`,
                         );
                       }
                     } catch (error) {
@@ -1461,7 +1464,7 @@ const BookingDetailsScreen = () => {
                         <TouchableOpacity
                           onPress={() =>
                             setBeforePhotos(
-                              beforePhotos.filter((_, i) => i !== index)
+                              beforePhotos.filter((_, i) => i !== index),
                             )
                           }
                           className="absolute -top-2 -right-2 bg-red-500 rounded-full w-6 h-6 items-center justify-center"
@@ -1486,18 +1489,18 @@ const BookingDetailsScreen = () => {
                     try {
                       setUploadingPhotos(true);
                       const imageUris = await pickMultipleImages(
-                        5 - afterPhotos.length
+                        5 - afterPhotos.length,
                       );
 
                       if (imageUris.length > 0) {
                         const base64Promises = imageUris.map((uri) =>
-                          convertImageToBase64(uri)
+                          convertImageToBase64(uri),
                         );
                         const base64Images = await Promise.all(base64Promises);
                         setAfterPhotos([...afterPhotos, ...base64Images]);
                         Alert.alert(
                           "Success",
-                          `${base64Images.length} photo(s) added`
+                          `${base64Images.length} photo(s) added`,
                         );
                       }
                     } catch (error) {
@@ -1564,7 +1567,7 @@ const BookingDetailsScreen = () => {
                         <TouchableOpacity
                           onPress={() =>
                             setAfterPhotos(
-                              afterPhotos.filter((_, i) => i !== index)
+                              afterPhotos.filter((_, i) => i !== index),
                             )
                           }
                           className="absolute -top-2 -right-2 bg-red-500 rounded-full w-6 h-6 items-center justify-center"
@@ -1626,7 +1629,7 @@ const BookingDetailsScreen = () => {
             onMomentumScrollEnd={(event) => {
               const index = Math.round(
                 event.nativeEvent.contentOffset.x /
-                  event.nativeEvent.layoutMeasurement.width
+                  event.nativeEvent.layoutMeasurement.width,
               );
               setSelectedImageIndex(index);
             }}

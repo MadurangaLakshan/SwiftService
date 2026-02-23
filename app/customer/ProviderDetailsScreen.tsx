@@ -14,8 +14,9 @@ import {
   View,
 } from "react-native";
 import { useCustomer } from "../context/CustomerContext";
-import { createBooking, getProviderReviews } from "../services/apiService";
+import { createBooking } from "../services/bookingService";
 import { createConversation } from "../services/messageService";
+import { getProviderReviews } from "../services/reviewService";
 import BookingAddressSelector from "../utils/BookingAddressSelector.tsx";
 import {
   convertImageToBase64,
@@ -55,8 +56,8 @@ const ProviderDetailsScreen = () => {
     typeof service === "string"
       ? service
       : Array.isArray(service)
-      ? service.join(", ")
-      : "";
+        ? service.join(", ")
+        : "";
 
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
@@ -156,7 +157,7 @@ const ProviderDetailsScreen = () => {
       if (imageUris.length > 0) {
         // Convert all selected images to base64
         const base64Promises = imageUris.map((uri) =>
-          convertImageToBase64(uri)
+          convertImageToBase64(uri),
         );
 
         const base64Images = await Promise.all(base64Promises);
@@ -202,7 +203,7 @@ const ProviderDetailsScreen = () => {
       pickImages,
       handleTakePhoto,
       "Add Photo",
-      "Choose an option"
+      "Choose an option",
     );
   };
 
@@ -291,7 +292,7 @@ const ProviderDetailsScreen = () => {
         });
       } else {
         alert(
-          `Failed to create conversation: ${response.error || "Unknown error"}`
+          `Failed to create conversation: ${response.error || "Unknown error"}`,
         );
       }
     } catch (error: any) {

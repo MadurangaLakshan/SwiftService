@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { auth } from "../config/firebase";
-import { getCustomerProfile } from "../services/apiService";
+import { getCustomerProfile } from "../services/customerService";
 
 interface CustomerData {
   _id: string;

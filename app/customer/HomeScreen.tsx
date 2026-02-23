@@ -19,8 +19,8 @@ import { useCustomer } from "../context/CustomerContext";
 import LocationFilterModal, {
   FilterOptions,
 } from "../customer/LocationFilterModal";
-import { getAllProviders } from "../services/apiService";
 import { getUnreadCount } from "../services/notificationService";
+import { getAllProviders } from "../services/providerService";
 import {
   filterProvidersByDistance,
   getDistanceString,
@@ -187,7 +187,7 @@ const HomeScreen = () => {
       filtered = filtered.filter(
         (provider) =>
           provider.services.some((s) => s.toLowerCase() === dbValue) ||
-          provider.customServices.some((s) => s.toLowerCase() === dbValue)
+          provider.customServices.some((s) => s.toLowerCase() === dbValue),
       );
     }
 
@@ -199,8 +199,8 @@ const HomeScreen = () => {
           provider.name.toLowerCase().includes(lowerQuery) ||
           provider.services.some((s) => s.toLowerCase().includes(lowerQuery)) ||
           provider.customServices.some((s) =>
-            s.toLowerCase().includes(lowerQuery)
-          )
+            s.toLowerCase().includes(lowerQuery),
+          ),
       );
     }
 
@@ -218,7 +218,7 @@ const HomeScreen = () => {
         const locationFiltered = await filterProvidersByDistance(
           providersWithFlatAddress,
           activeLocationFilter.location,
-          activeLocationFilter.radiusKm
+          activeLocationFilter.radiusKm,
         );
 
         filtered = locationFiltered;
@@ -494,7 +494,7 @@ const HomeScreen = () => {
                                     {specialty}
                                   </Text>
                                 </View>
-                              )
+                              ),
                             )}
                           </View>
                         )}
@@ -525,8 +525,8 @@ const HomeScreen = () => {
                     {searchQuery
                       ? ` for "${searchQuery}"`
                       : selectedCategory !== "All"
-                      ? ` for ${selectedCategory}`
-                      : ""}
+                        ? ` for ${selectedCategory}`
+                        : ""}
                     {activeLocationFilter &&
                       ` within ${activeLocationFilter.radiusKm}km`}
                   </Text>

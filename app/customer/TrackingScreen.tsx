@@ -15,7 +15,7 @@ import MapView, {
   PROVIDER_GOOGLE,
   Region,
 } from "react-native-maps";
-import { getBookingTracking } from "../services/apiService";
+import { getBookingTracking } from "../services/locationService";
 
 interface TrackingScreenProps {
   bookingId: string;
@@ -75,7 +75,7 @@ const TrackingScreen: React.FC<TrackingScreenProps> = ({
           duration: 1000,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
 
     return () => clearInterval(interval);

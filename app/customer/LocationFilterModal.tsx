@@ -20,7 +20,7 @@ interface LocationFilterModalProps {
   visible: boolean;
   onClose: () => void;
   onApplyFilter: (filterOptions: FilterOptions) => Promise<void>;
-  userAddress?: string; // Just the address text string
+  userAddress?: string;
 }
 
 export interface FilterOptions {
@@ -53,7 +53,7 @@ const LocationFilterModal: React.FC<LocationFilterModalProps> = ({
         if (!currentLoc) {
           Alert.alert(
             "Location Error",
-            "Could not get your current location. Please enable location services."
+            "Could not get your current location. Please enable location services.",
           );
           setLoadingLocation(false);
           return;
@@ -65,7 +65,7 @@ const LocationFilterModal: React.FC<LocationFilterModalProps> = ({
         if (!userAddress) {
           Alert.alert(
             "Address Error",
-            "No saved address found. Please add your address in settings."
+            "No saved address found. Please add your address in settings.",
           );
           setLoadingLocation(false);
           return;
@@ -75,7 +75,7 @@ const LocationFilterModal: React.FC<LocationFilterModalProps> = ({
         if (!coords) {
           Alert.alert(
             "Geocoding Error",
-            "Could not find coordinates for your address. Please check your address."
+            "Could not find coordinates for your address. Please check your address.",
           );
           setLoadingLocation(false);
           return;

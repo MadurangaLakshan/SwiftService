@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 import { auth } from "../config/firebase";
-import { getProviderReviews } from "../services/apiService";
+import { getProviderReviews } from "../services/reviewService";
 
 interface Review {
   _id: string;
@@ -111,7 +111,7 @@ const ReviewScreen = () => {
   const renderRatingBar = (
     stars: 1 | 2 | 3 | 4 | 5,
     count: number,
-    total: number
+    total: number,
   ) => {
     const percentage = total > 0 ? (count / total) * 100 : 0;
 
@@ -164,7 +164,7 @@ const ReviewScreen = () => {
         (review) =>
           review.customerName.toLowerCase().includes(query) ||
           review.review?.toLowerCase().includes(query) ||
-          review.serviceType.toLowerCase().includes(query)
+          review.serviceType.toLowerCase().includes(query),
       );
     }
 
@@ -175,7 +175,7 @@ const ReviewScreen = () => {
     if (!reviewData?.reviews || reviewData.reviews.length === 0) return "0.0";
     const total = reviewData.reviews.reduce(
       (sum, review) => sum + review.rating,
-      0
+      0,
     );
     return (total / reviewData.reviews.length).toFixed(1);
   };
@@ -272,8 +272,8 @@ const ReviewScreen = () => {
                   reviewData.breakdown[
                     stars as keyof typeof reviewData.breakdown
                   ],
-                  reviewData.total
-                )
+                  reviewData.total,
+                ),
               )}
             </View>
           )}
@@ -408,8 +408,8 @@ const ReviewScreen = () => {
                 {filter !== "all"
                   ? `You don't have any ${filter}-star reviews yet`
                   : searchQuery
-                  ? `No reviews match "${searchQuery}"`
-                  : "You haven't received any reviews yet"}
+                    ? `No reviews match "${searchQuery}"`
+                    : "You haven't received any reviews yet"}
               </Text>
               {(filter !== "all" || searchQuery) && (
                 <TouchableOpacity

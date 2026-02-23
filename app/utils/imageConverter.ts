@@ -1,6 +1,3 @@
-// utils/imageConverter.ts
-// Used for converting multiple images to base64 (e.g., booking attachments)
-
 import { readAsStringAsync } from "expo-file-system/legacy";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
@@ -14,7 +11,7 @@ export const requestMediaLibraryPermissions = async (): Promise<boolean> => {
   if (status !== "granted") {
     Alert.alert(
       "Permission Required",
-      "Please grant camera roll permissions to upload images."
+      "Please grant camera roll permissions to upload images.",
     );
     return false;
   }
@@ -29,7 +26,7 @@ export const requestCameraPermissions = async (): Promise<boolean> => {
   if (status !== "granted") {
     Alert.alert(
       "Permission Required",
-      "Please grant camera permissions to take photos."
+      "Please grant camera permissions to take photos.",
     );
     return false;
   }
@@ -46,7 +43,7 @@ export const requestCameraPermissions = async (): Promise<boolean> => {
 export const convertImageToBase64 = async (
   uri: string,
   maxWidth: number = 800,
-  quality: number = 0.6
+  quality: number = 0.6,
 ): Promise<string> => {
   try {
     // Compress image
@@ -56,7 +53,7 @@ export const convertImageToBase64 = async (
       {
         compress: quality,
         format: SaveFormat.JPEG,
-      }
+      },
     );
 
     // Convert to base64
@@ -77,7 +74,7 @@ export const convertImageToBase64 = async (
  * @returns Array of image URIs
  */
 export const pickMultipleImages = async (
-  maxImages: number = 5
+  maxImages: number = 5,
 ): Promise<string[]> => {
   const hasPermission = await requestMediaLibraryPermissions();
   if (!hasPermission) return [];
@@ -107,7 +104,7 @@ export const pickMultipleImages = async (
  * @returns Image URI or null if cancelled
  */
 export const takePhoto = async (
-  allowEditing: boolean = false
+  allowEditing: boolean = false,
 ): Promise<string | null> => {
   const hasPermission = await requestCameraPermissions();
   if (!hasPermission) return null;
@@ -139,7 +136,7 @@ export const takePhoto = async (
 export const pickAndConvertMultipleImages = async (
   maxImages: number = 5,
   maxWidth: number = 800,
-  quality: number = 0.6
+  quality: number = 0.6,
 ): Promise<string[]> => {
   try {
     const imageUris = await pickMultipleImages(maxImages);
@@ -150,7 +147,7 @@ export const pickAndConvertMultipleImages = async (
 
     // Convert all images to base64
     const base64Promises = imageUris.map((uri) =>
-      convertImageToBase64(uri, maxWidth, quality)
+      convertImageToBase64(uri, maxWidth, quality),
     );
 
     const base64Images = await Promise.all(base64Promises);
@@ -172,7 +169,7 @@ export const pickAndConvertMultipleImages = async (
 export const takeAndConvertPhoto = async (
   allowEditing: boolean = false,
   maxWidth: number = 800,
-  quality: number = 0.6
+  quality: number = 0.6,
 ): Promise<string | null> => {
   try {
     const photoUri = await takePhoto(allowEditing);
@@ -201,7 +198,7 @@ export const showImagePickerOptions = (
   onGalleryPress: () => void,
   onCameraPress: () => void,
   title: string = "Add Photo",
-  message: string = "Choose an option"
+  message: string = "Choose an option",
 ) => {
   Alert.alert(
     title,
@@ -220,7 +217,7 @@ export const showImagePickerOptions = (
         style: "cancel",
       },
     ],
-    { cancelable: true }
+    { cancelable: true },
   );
 };
 
@@ -250,7 +247,7 @@ export const getBase64ImageSize = (base64String: string): number => {
 export const validateImageSizes = (
   base64Images: string[],
   maxSizePerImageMB: number = 2,
-  maxTotalSizeMB: number = 10
+  maxTotalSizeMB: number = 10,
 ): { valid: boolean; message?: string } => {
   let totalSize = 0;
 
@@ -272,7 +269,7 @@ export const validateImageSizes = (
     return {
       valid: false,
       message: `Total image size (${totalSize.toFixed(
-        2
+        2,
       )}MB) exceeds maximum (${maxTotalSizeMB}MB).`,
     };
   }

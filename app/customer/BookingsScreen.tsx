@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { auth } from "../config/firebase";
-import { getCustomerBookings } from "../services/apiService";
+import { getCustomerBookings } from "../services/bookingService";
 
 type BookingStatus =
   | "pending"
@@ -159,7 +159,7 @@ const BookingsScreen = () => {
         <View className="flex-row items-center justify-between">
           <View
             className={`flex-row items-center px-3 py-1.5 rounded-full border ${getStatusColor(
-              item.status
+              item.status,
             )}`}
           >
             <Ionicons
@@ -169,12 +169,12 @@ const BookingsScreen = () => {
                 item.status === "confirmed"
                   ? "#15803d"
                   : item.status === "pending"
-                  ? "#a16207"
-                  : item.status === "in-progress"
-                  ? "#7c3aed"
-                  : item.status === "completed"
-                  ? "#1e40af"
-                  : "#b91c1c"
+                    ? "#a16207"
+                    : item.status === "in-progress"
+                      ? "#7c3aed"
+                      : item.status === "completed"
+                        ? "#1e40af"
+                        : "#b91c1c"
               }
             />
             <Text
@@ -182,12 +182,12 @@ const BookingsScreen = () => {
                 item.status === "confirmed"
                   ? "text-green-700"
                   : item.status === "pending"
-                  ? "text-yellow-700"
-                  : item.status === "in-progress"
-                  ? "text-purple-700"
-                  : item.status === "completed"
-                  ? "text-blue-700"
-                  : "text-red-700"
+                    ? "text-yellow-700"
+                    : item.status === "in-progress"
+                      ? "text-purple-700"
+                      : item.status === "completed"
+                        ? "text-blue-700"
+                        : "text-red-700"
               }`}
             >
               {item.status}

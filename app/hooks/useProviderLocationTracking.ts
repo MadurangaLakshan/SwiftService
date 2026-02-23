@@ -1,13 +1,13 @@
 import * as Location from "expo-location";
 import { useEffect, useRef } from "react";
-import { updateProviderLocation } from "../services/apiService";
+import { updateProviderLocation } from "../services/locationService";
 
 export const useProviderLocationTracking = (
   bookingId: string,
-  isTracking: boolean
+  isTracking: boolean,
 ) => {
   const locationSubscription = useRef<Location.LocationSubscription | null>(
-    null
+    null,
   );
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export const useProviderLocationTracking = (
           } catch (error) {
             console.error("Error updating location:", error);
           }
-        }
+        },
       );
     } catch (error) {
       console.error("Error starting tracking:", error);

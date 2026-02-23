@@ -9,10 +9,8 @@ import {
   View,
 } from "react-native";
 
-import {
-  updateCustomerProfilePicture,
-  updateProviderProfilePicture,
-} from "../services/apiService";
+import { updateCustomerProfilePicture } from "../services/customerService";
+import { updateProviderProfilePicture } from "../services/providerService";
 import { pickAndConvertImage } from "../utils/imageUpload";
 
 interface ProfilePictureUploadProps {
@@ -54,7 +52,7 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
         onUploadComplete(base64Image);
         Alert.alert(
           "Photo Selected",
-          "Your photo will be uploaded when you complete registration."
+          "Your photo will be uploaded when you complete registration.",
         );
         setUploading(false);
         return;
@@ -74,7 +72,7 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
         Alert.alert("Success", "Profile picture updated successfully!");
       } else {
         throw new Error(
-          result.error || "Failed to update profile picture on server."
+          result.error || "Failed to update profile picture on server.",
         );
       }
     } catch (error: any) {
@@ -125,8 +123,8 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
         {isRegistration && displayImage
           ? "Photo ready! Will upload on registration"
           : displayImage
-          ? "Tap camera to change"
-          : "Tap camera to add photo"}
+            ? "Tap camera to change"
+            : "Tap camera to add photo"}
       </Text>
     </View>
   );

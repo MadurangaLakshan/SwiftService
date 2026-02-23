@@ -18,8 +18,8 @@ import {
 } from "react-native";
 import colors from "tailwindcss/colors";
 import { auth } from "../config/firebase";
-import { registerProviderProfile } from "../services/apiService";
 import { registerWithFirebase } from "../services/authService";
+import { registerProviderProfile } from "../services/providerService";
 import AddressPickerWithMap from "../utils/AddressPickerWithMaps";
 import ProfilePictureUpload from "../utils/ProfilePictureUpload";
 
@@ -218,7 +218,7 @@ export default function RegisterProvider() {
       if (finalProfilePictureUrl) {
         console.log(
           "📸 Profile picture included (length):",
-          finalProfilePictureUrl.length
+          finalProfilePictureUrl.length,
         );
       } else {
         console.log("ℹ️ No profile picture selected");

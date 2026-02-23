@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { auth } from "../config/firebase";
 import { useCustomer } from "../context/CustomerContext";
-import { updateCustomerProfilePicture } from "../services/apiService";
+import { updateCustomerProfilePicture } from "../services/customerService";
 import { pickAndConvertImage } from "../utils/imageUpload";
 
 interface MenuItem {
@@ -112,7 +112,7 @@ const ProfileScreen: React.FC = () => {
       // Upload base64 to MongoDB
       const result = await updateCustomerProfilePicture(
         auth.currentUser.uid,
-        base64Image
+        base64Image,
       );
 
       console.log("Step 4: Upload result:", result);
@@ -170,7 +170,7 @@ const ProfileScreen: React.FC = () => {
           },
         },
       ],
-      { cancelable: true }
+      { cancelable: true },
     );
   };
 

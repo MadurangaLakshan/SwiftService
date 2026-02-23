@@ -21,9 +21,8 @@ import {
   cancelBooking,
   disputeBooking,
   getBookingById,
-  submitBookingReview,
-} from "../services/apiService";
-
+} from "../services/bookingService";
+import { submitBookingReview } from "../services/reviewService";
 import PaymentSection from "./PaymentSection";
 
 import TrackingScreen from "./TrackingScreen";
@@ -217,7 +216,7 @@ const BookingDetailsScreen = () => {
       if (response.success) {
         Alert.alert(
           "Success",
-          "Dispute raised successfully. Our team will review it."
+          "Dispute raised successfully. Our team will review it.",
         );
         setShowDisputeModal(false);
         setDisputeReason("");
@@ -422,7 +421,7 @@ const BookingDetailsScreen = () => {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View
           className={`mx-6 mt-6 p-4 rounded-2xl border ${getStatusColor(
-            booking.status
+            booking.status,
           )}`}
         >
           <View className="flex-row items-center">
@@ -433,17 +432,17 @@ const BookingDetailsScreen = () => {
                 booking.status === "confirmed" || booking.status === "completed"
                   ? "#15803d"
                   : booking.status === "pending"
-                  ? "#a16207"
-                  : booking.status === "in-progress"
-                  ? "#7c3aed"
-                  : booking.status === "awaiting-customer-approval"
-                  ? "#ea580c"
-                  : booking.status === "on-the-way" ||
-                    booking.status === "arrived"
-                  ? "#4f46e5"
-                  : booking.status === "disputed"
-                  ? "#ec4899"
-                  : "#b91c1c"
+                    ? "#a16207"
+                    : booking.status === "in-progress"
+                      ? "#7c3aed"
+                      : booking.status === "awaiting-customer-approval"
+                        ? "#ea580c"
+                        : booking.status === "on-the-way" ||
+                            booking.status === "arrived"
+                          ? "#4f46e5"
+                          : booking.status === "disputed"
+                            ? "#ec4899"
+                            : "#b91c1c"
               }
             />
             <View className="ml-3 flex-1">
@@ -595,7 +594,7 @@ const BookingDetailsScreen = () => {
                           source={{ uri: photo }}
                           className="w-24 h-24 rounded-lg mr-2"
                         />
-                      )
+                      ),
                     )}
                   </ScrollView>
                 </View>
@@ -614,7 +613,7 @@ const BookingDetailsScreen = () => {
                           source={{ uri: photo }}
                           className="w-24 h-24 rounded-lg mr-2"
                         />
-                      )
+                      ),
                     )}
                   </ScrollView>
                 </View>
@@ -1003,8 +1002,8 @@ const BookingDetailsScreen = () => {
               booking.status === "on-the-way"
                 ? "bg-indigo-50 border-indigo-200"
                 : booking.status === "arrived"
-                ? "bg-purple-50 border-purple-200"
-                : "bg-blue-50 border-blue-200"
+                  ? "bg-purple-50 border-purple-200"
+                  : "bg-blue-50 border-blue-200"
             }`}
           >
             <View className="flex-row items-center">
@@ -1013,16 +1012,16 @@ const BookingDetailsScreen = () => {
                   booking.status === "on-the-way"
                     ? "car"
                     : booking.status === "arrived"
-                    ? "location"
-                    : "construct"
+                      ? "location"
+                      : "construct"
                 }
                 size={24}
                 color={
                   booking.status === "on-the-way"
                     ? "#4f46e5"
                     : booking.status === "arrived"
-                    ? "#7c3aed"
-                    : "#3b82f6"
+                      ? "#7c3aed"
+                      : "#3b82f6"
                 }
               />
               <Text
@@ -1030,8 +1029,8 @@ const BookingDetailsScreen = () => {
                   booking.status === "on-the-way"
                     ? "text-indigo-700"
                     : booking.status === "arrived"
-                    ? "text-purple-700"
-                    : "text-blue-700"
+                      ? "text-purple-700"
+                      : "text-blue-700"
                 }`}
               >
                 {getStatusMessage(booking.status)}

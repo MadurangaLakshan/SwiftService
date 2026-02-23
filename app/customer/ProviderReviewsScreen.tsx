@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { getProviderReviews } from "../services/apiService";
+import { getProviderReviews } from "../services/reviewService";
 
 interface Review {
   _id: string;
@@ -162,7 +162,7 @@ const ProviderReviewsScreen = () => {
                     reviewData.breakdown[
                       stars as keyof typeof reviewData.breakdown
                     ],
-                    reviewData.total
+                    reviewData.total,
                   )}
                 </View>
               ))}

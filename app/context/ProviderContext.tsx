@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { auth } from "../config/firebase";
-import { getProviderProfile } from "../services/apiService";
+import { getProviderProfile } from "../services/providerService";
 
 interface ProviderData {
   userId: string;
@@ -50,7 +50,7 @@ export const ProviderProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [providerData, setProviderDataState] = useState<ProviderData | null>(
-    null
+    null,
   );
   const [loading, setLoading] = useState(true);
 

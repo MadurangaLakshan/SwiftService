@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { useProvider } from "../context/ProviderContext";
-import { getProviderBookings } from "../services/apiService";
+import { getProviderBookings } from "../services/bookingService";
 
 interface Booking {
   _id: string;
@@ -256,7 +256,7 @@ const BookingsScreen = () => {
                     </View>
                     <View
                       className={`rounded-full px-3 py-1 ${getStatusColor(
-                        booking.status
+                        booking.status,
                       )}`}
                     >
                       <Text className="text-xs font-semibold capitalize">

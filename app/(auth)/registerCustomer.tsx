@@ -17,10 +17,10 @@ import {
 } from "react-native";
 import colors from "tailwindcss/colors";
 import { useCustomer } from "../context/CustomerContext";
-import { registerCustomerProfile } from "../services/apiService";
 import { registerWithFirebase } from "../services/authService";
-import ProfilePictureUpload from "../utils/ProfilePictureUpload";
+import { registerCustomerProfile } from "../services/customerService";
 import AddressPickerWithMap from "../utils/AddressPickerWithMaps";
+import ProfilePictureUpload from "../utils/ProfilePictureUpload";
 
 interface Coordinates {
   latitude: number;
@@ -160,26 +160,26 @@ export default function RegisterCustomer() {
       if (finalProfilePictureUrl) {
         console.log(
           "📸 Profile picture included (length):",
-          finalProfilePictureUrl.length
+          finalProfilePictureUrl.length,
         );
       } else {
         console.log("ℹ️ No profile picture selected");
       }
 
       const customerData = {
-  userId: newUserId,
-  name: fullName,
-  email: email,
-  phone: phone,
-  location: {
-    address,
-    city,
-    postalCode,
-    coordinates: coordinates || undefined, 
-  },
-  propertyType,
-  profilePhoto: finalProfilePictureUrl,
-};
+        userId: newUserId,
+        name: fullName,
+        email: email,
+        phone: phone,
+        location: {
+          address,
+          city,
+          postalCode,
+          coordinates: coordinates || undefined,
+        },
+        propertyType,
+        profilePhoto: finalProfilePictureUrl,
+      };
 
       console.log("Sending customer data:", {
         ...customerData,
@@ -381,36 +381,36 @@ export default function RegisterCustomer() {
     </View>
   );
 
- const renderStep2 = () => (
-  <View className="w-full">
-    <Text className="text-2xl font-bold mb-2">Your Location</Text>
-    <Text className="text-gray-600 mb-6">
-      Help us connect you with nearby service providers
-    </Text>
+  const renderStep2 = () => (
+    <View className="w-full">
+      <Text className="text-2xl font-bold mb-2">Your Location</Text>
+      <Text className="text-gray-600 mb-6">
+        Help us connect you with nearby service providers
+      </Text>
 
-    <AddressPickerWithMap
-      address={address}
-      city={city}
-      postalCode={postalCode}
-      onAddressChange={(text) => {
-        setAddress(text);
-        setErrors({ ...errors, address: "" });
-      }}
-      onCityChange={(text) => {
-        setCity(text);
-        setErrors({ ...errors, city: "" });
-      }}
-      onPostalCodeChange={(text) => {
-        setPostalCode(text);
-        setErrors({ ...errors, postalCode: "" });
-      }}
-      onCoordinatesConfirm={setCoordinates}
-      errors={{
-        address: errors.address,
-        city: errors.city,
-        postalCode: errors.postalCode,
-      }}
-    />
+      <AddressPickerWithMap
+        address={address}
+        city={city}
+        postalCode={postalCode}
+        onAddressChange={(text) => {
+          setAddress(text);
+          setErrors({ ...errors, address: "" });
+        }}
+        onCityChange={(text) => {
+          setCity(text);
+          setErrors({ ...errors, city: "" });
+        }}
+        onPostalCodeChange={(text) => {
+          setPostalCode(text);
+          setErrors({ ...errors, postalCode: "" });
+        }}
+        onCoordinatesConfirm={setCoordinates}
+        errors={{
+          address: errors.address,
+          city: errors.city,
+          postalCode: errors.postalCode,
+        }}
+      />
 
       <Text className="text-gray-700 font-semibold mb-3 mt-3">
         Property Type

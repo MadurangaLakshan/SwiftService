@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { auth } from "../config/firebase";
 import { useProvider } from "../context/ProviderContext";
-import { updateProviderProfilePicture } from "../services/apiService";
+import { updateProviderProfilePicture } from "../services/providerService";
 import { pickAndConvertImage } from "../utils/imageUpload";
 
 interface MenuItem {
@@ -129,7 +129,7 @@ const ProfileScreen: React.FC = () => {
 
       const result = await updateProviderProfilePicture(
         auth.currentUser.uid,
-        base64Image
+        base64Image,
       );
 
       if (result.success) {
@@ -170,7 +170,7 @@ const ProfileScreen: React.FC = () => {
           },
         },
       ],
-      { cancelable: true }
+      { cancelable: true },
     );
   };
 
