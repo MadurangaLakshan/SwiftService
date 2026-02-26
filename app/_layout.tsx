@@ -1,6 +1,7 @@
 import { StripeProvider } from "@stripe/stripe-react-native";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { auth } from "./config/firebase";
 import "./globals.css";
 import socketService from "./socket/socketService";
@@ -24,7 +25,7 @@ export default function RootLayout() {
               console.log("✅ Socket connected successfully");
             } else {
               console.warn(
-                "⚠️ Socket connection initiated but not yet connected"
+                "⚠️ Socket connection initiated but not yet connected",
               );
             }
           } catch (error) {
@@ -50,12 +51,14 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <StripeProvider
-      publishableKey={stripePublishableKey || ""}
-      merchantIdentifier="merchant.com.handyhub"
-      urlScheme="handyhub"
-    >
-      <Stack screenOptions={{ headerShown: false }} />
-    </StripeProvider>
+    <KeyboardProvider>
+      <StripeProvider
+        publishableKey={stripePublishableKey || ""}
+        merchantIdentifier="merchant.com.handyhub"
+        urlScheme="handyhub"
+      >
+        <Stack screenOptions={{ headerShown: false }} />
+      </StripeProvider>
+    </KeyboardProvider>
   );
 }

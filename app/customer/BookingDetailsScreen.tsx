@@ -16,6 +16,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import {
   approveBookingCompletion,
   cancelBooking,
@@ -1243,76 +1244,79 @@ const BookingDetailsScreen = () => {
         animationType="slide"
         onRequestClose={() => setShowRatingModal(false)}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View className="flex-1 bg-black/50 items-center justify-end">
-            <TouchableWithoutFeedback onPress={() => {}}>
-              <View className="bg-white rounded-t-3xl p-6 w-full">
-                <View className="items-center mb-6">
-                  <Text className="text-xl font-bold text-gray-800 mb-2">
-                    Rate Your Experience
-                  </Text>
-                  <Text className="text-center text-gray-600">
-                    How was your experience with {booking.providerDetails.name}?
-                  </Text>
-                </View>
-
-                <View className="flex-row justify-center mb-6">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <TouchableOpacity
-                      key={star}
-                      onPress={() => setRating(star)}
-                      className="mx-2"
-                    >
-                      <Ionicons
-                        name={star <= rating ? "star" : "star-outline"}
-                        size={40}
-                        color={star <= rating ? "#fbbf24" : "#d1d5db"}
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <TextInput
-                  value={reviewText}
-                  onChangeText={setReviewText}
-                  placeholder="Write your review (optional)..."
-                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-6 text-gray-700 h-24"
-                  multiline
-                  textAlignVertical="top"
-                />
-
-                <View className="flex-row gap-3">
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShowRatingModal(false);
-                      setRating(0);
-                      setReviewText("");
-                    }}
-                    className="flex-1 bg-gray-100 py-4 rounded-xl"
-                    disabled={actionLoading}
-                  >
-                    <Text className="text-center text-gray-700 font-semibold">
-                      Cancel
+        <KeyboardAvoidingView behavior="padding" className="flex-1 bg-white">
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View className="flex-1 bg-black/50 items-center justify-end">
+              <TouchableWithoutFeedback onPress={() => {}}>
+                <View className="bg-white rounded-t-3xl p-6 w-full">
+                  <View className="items-center mb-6">
+                    <Text className="text-xl font-bold text-gray-800 mb-2">
+                      Rate Your Experience
                     </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleSubmitReview}
-                    className="flex-1 bg-blue-600 py-4 rounded-xl"
-                    disabled={rating === 0 || actionLoading}
-                  >
-                    {actionLoading ? (
-                      <ActivityIndicator color="white" size="small" />
-                    ) : (
-                      <Text className="text-center text-white font-semibold">
-                        Submit Rating
+                    <Text className="text-center text-gray-600">
+                      How was your experience with{" "}
+                      {booking.providerDetails.name}?
+                    </Text>
+                  </View>
+
+                  <View className="flex-row justify-center mb-6">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <TouchableOpacity
+                        key={star}
+                        onPress={() => setRating(star)}
+                        className="mx-2"
+                      >
+                        <Ionicons
+                          name={star <= rating ? "star" : "star-outline"}
+                          size={40}
+                          color={star <= rating ? "#fbbf24" : "#d1d5db"}
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <TextInput
+                    value={reviewText}
+                    onChangeText={setReviewText}
+                    placeholder="Write your review (optional)..."
+                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-6 text-gray-700 h-24"
+                    multiline
+                    textAlignVertical="top"
+                  />
+
+                  <View className="flex-row gap-3">
+                    <TouchableOpacity
+                      onPress={() => {
+                        setShowRatingModal(false);
+                        setRating(0);
+                        setReviewText("");
+                      }}
+                      className="flex-1 bg-gray-100 py-4 rounded-xl"
+                      disabled={actionLoading}
+                    >
+                      <Text className="text-center text-gray-700 font-semibold">
+                        Cancel
                       </Text>
-                    )}
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleSubmitReview}
+                      className="flex-1 bg-blue-600 py-4 rounded-xl"
+                      disabled={rating === 0 || actionLoading}
+                    >
+                      {actionLoading ? (
+                        <ActivityIndicator color="white" size="small" />
+                      ) : (
+                        <Text className="text-center text-white font-semibold">
+                          Submit Rating
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* NEW: Tracking Modal */}

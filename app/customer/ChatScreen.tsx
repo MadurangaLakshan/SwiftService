@@ -6,13 +6,12 @@ import {
   FlatList,
   Image,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { auth } from "../config/firebase";
 import { getMessages } from "../services/messageService";
 import socketService from "../socket/socketService";
@@ -53,7 +52,7 @@ const ChatScreen = () => {
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
         }, 100);
-      }
+      },
     );
 
     return () => {
@@ -267,11 +266,7 @@ const ChatScreen = () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1 bg-white"
-      keyboardVerticalOffset={0}
-    >
+    <KeyboardAvoidingView behavior="padding" className="flex-1 bg-white">
       {/* Header */}
       <View className="bg-white px-4 pt-12 pb-3 border-b border-gray-200">
         <View className="flex-row items-center">
@@ -314,6 +309,7 @@ const ChatScreen = () => {
         ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
+        keyboardDismissMode="interactive"
         keyExtractor={(item, index) => item._id || `message-${index}`}
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}

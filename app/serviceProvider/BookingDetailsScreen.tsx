@@ -16,7 +16,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import {
   cancelBooking,
   getBookingById,
@@ -1187,150 +1187,156 @@ const BookingDetailsScreen = () => {
         animationType="slide"
         onRequestClose={() => setShowActualHoursModal(false)}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View className="flex-1 bg-black/50 items-center justify-end">
-            <TouchableWithoutFeedback onPress={() => {}}>
-              <View className="bg-white rounded-t-3xl p-6 w-full">
-                <View className="items-center mb-6">
-                  <View className="w-16 h-16 bg-orange-100 rounded-full items-center justify-center mb-3">
-                    <Ionicons name="time-outline" size={32} color="#ea580c" />
-                  </View>
-                  <Text className="text-xl font-bold text-gray-800 mb-2">
-                    Complete Work
-                  </Text>
-                  <Text className="text-center text-gray-600">
-                    Enter the actual hours worked to complete this job
-                  </Text>
-                </View>
-
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Actual Hours Worked *
-                  </Text>
-                  <TextInput
-                    value={actualHours}
-                    onChangeText={setActualHours}
-                    placeholder="e.g., 2.5"
-                    keyboardType="decimal-pad"
-                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-700 text-base"
-                  />
-                  <Text className="text-xs text-gray-500 mt-1">
-                    Estimated: {booking.pricing.estimatedHours} hours
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowActualHoursModal(false);
-
-                    setTimeout(() => {
-                      setShowWorkCompletionModal(true);
-                    }, 400);
-                  }}
-                  className="bg-blue-50 border border-blue-200 py-3 rounded-xl mb-4"
-                >
-                  <View className="flex-row items-center justify-center">
-                    <Ionicons name="camera-outline" size={20} color="#3b82f6" />
-                    <Text className="text-blue-600 font-semibold ml-2">
-                      Add Work Photos (Optional)
+        <KeyboardAvoidingView behavior="padding" className="flex-1 bg-white">
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View className="flex-1 bg-black/50 items-center justify-end">
+              <TouchableWithoutFeedback onPress={() => {}}>
+                <View className="bg-white rounded-t-3xl p-6 w-full">
+                  <View className="items-center mb-6">
+                    <View className="w-16 h-16 bg-orange-100 rounded-full items-center justify-center mb-3">
+                      <Ionicons name="time-outline" size={32} color="#ea580c" />
+                    </View>
+                    <Text className="text-xl font-bold text-gray-800 mb-2">
+                      Complete Work
+                    </Text>
+                    <Text className="text-center text-gray-600">
+                      Enter the actual hours worked to complete this job
                     </Text>
                   </View>
-                </TouchableOpacity>
 
-                {(beforePhotos.length > 0 || afterPhotos.length > 0) && (
                   <View className="mb-4">
-                    <View className="flex-row items-center justify-between mb-2">
-                      <Text className="text-sm font-semibold text-gray-700">
-                        Attached Photos
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => {
-                          setShowActualHoursModal(false);
-                          setTimeout(
-                            () => setShowWorkCompletionModal(true),
-                            400,
-                          );
-                        }}
-                      >
-                        <Text className="text-blue-600 text-xs font-semibold">
-                          Edit Photos
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      className="flex-row"
-                    >
-                      {beforePhotos.map((photo, index) => (
-                        <View
-                          key={`pre-before-${index}`}
-                          className="mr-2 relative"
-                        >
-                          <Image
-                            source={{ uri: photo }}
-                            className="w-16 h-16 rounded-lg border border-gray-200"
-                          />
-                          <View className="absolute bottom-0 left-0 right-0 bg-black/40 rounded-b-lg">
-                            <Text className="text-[8px] text-white text-center">
-                              Before
-                            </Text>
-                          </View>
-                        </View>
-                      ))}
-
-                      {afterPhotos.map((photo, index) => (
-                        <View
-                          key={`pre-after-${index}`}
-                          className="mr-2 relative"
-                        >
-                          <Image
-                            source={{ uri: photo }}
-                            className="w-16 h-16 rounded-lg border border-blue-200"
-                          />
-                          <View className="absolute bottom-0 left-0 right-0 bg-blue-600/60 rounded-b-lg">
-                            <Text className="text-[8px] text-white text-center">
-                              After
-                            </Text>
-                          </View>
-                        </View>
-                      ))}
-                    </ScrollView>
+                    <Text className="text-sm font-medium text-gray-700 mb-2">
+                      Actual Hours Worked *
+                    </Text>
+                    <TextInput
+                      value={actualHours}
+                      onChangeText={setActualHours}
+                      placeholder="e.g., 2.5"
+                      keyboardType="decimal-pad"
+                      className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-700 text-base"
+                    />
+                    <Text className="text-xs text-gray-500 mt-1">
+                      Estimated: {booking.pricing.estimatedHours} hours
+                    </Text>
                   </View>
-                )}
 
-                <View className="flex-row gap-3">
                   <TouchableOpacity
                     onPress={() => {
                       setShowActualHoursModal(false);
-                      setActualHours("");
+
+                      setTimeout(() => {
+                        setShowWorkCompletionModal(true);
+                      }, 400);
                     }}
-                    className="flex-1 bg-gray-100 py-4 rounded-xl"
-                    disabled={actionLoading}
+                    className="bg-blue-50 border border-blue-200 py-3 rounded-xl mb-4"
                   >
-                    <Text className="text-center text-gray-700 font-semibold">
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleCompleteWork}
-                    className="flex-1 bg-orange-600 py-4 rounded-xl"
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? (
-                      <ActivityIndicator color="white" size="small" />
-                    ) : (
-                      <Text className="text-center text-white font-semibold">
-                        Submit
+                    <View className="flex-row items-center justify-center">
+                      <Ionicons
+                        name="camera-outline"
+                        size={20}
+                        color="#3b82f6"
+                      />
+                      <Text className="text-blue-600 font-semibold ml-2">
+                        Add Work Photos (Optional)
                       </Text>
-                    )}
+                    </View>
                   </TouchableOpacity>
+
+                  {(beforePhotos.length > 0 || afterPhotos.length > 0) && (
+                    <View className="mb-4">
+                      <View className="flex-row items-center justify-between mb-2">
+                        <Text className="text-sm font-semibold text-gray-700">
+                          Attached Photos
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setShowActualHoursModal(false);
+                            setTimeout(
+                              () => setShowWorkCompletionModal(true),
+                              400,
+                            );
+                          }}
+                        >
+                          <Text className="text-blue-600 text-xs font-semibold">
+                            Edit Photos
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        className="flex-row"
+                      >
+                        {beforePhotos.map((photo, index) => (
+                          <View
+                            key={`pre-before-${index}`}
+                            className="mr-2 relative"
+                          >
+                            <Image
+                              source={{ uri: photo }}
+                              className="w-16 h-16 rounded-lg border border-gray-200"
+                            />
+                            <View className="absolute bottom-0 left-0 right-0 bg-black/40 rounded-b-lg">
+                              <Text className="text-[8px] text-white text-center">
+                                Before
+                              </Text>
+                            </View>
+                          </View>
+                        ))}
+
+                        {afterPhotos.map((photo, index) => (
+                          <View
+                            key={`pre-after-${index}`}
+                            className="mr-2 relative"
+                          >
+                            <Image
+                              source={{ uri: photo }}
+                              className="w-16 h-16 rounded-lg border border-blue-200"
+                            />
+                            <View className="absolute bottom-0 left-0 right-0 bg-blue-600/60 rounded-b-lg">
+                              <Text className="text-[8px] text-white text-center">
+                                After
+                              </Text>
+                            </View>
+                          </View>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  <View className="flex-row gap-3">
+                    <TouchableOpacity
+                      onPress={() => {
+                        setShowActualHoursModal(false);
+                        setActualHours("");
+                      }}
+                      className="flex-1 bg-gray-100 py-4 rounded-xl"
+                      disabled={actionLoading}
+                    >
+                      <Text className="text-center text-gray-700 font-semibold">
+                        Cancel
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleCompleteWork}
+                      className="flex-1 bg-orange-600 py-4 rounded-xl"
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? (
+                        <ActivityIndicator color="white" size="small" />
+                      ) : (
+                        <Text className="text-center text-white font-semibold">
+                          Submit
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal

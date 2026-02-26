@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useCustomer } from "../context/CustomerContext";
 import { createBooking } from "../services/bookingService";
 import { createConversation } from "../services/messageService";
@@ -522,229 +523,238 @@ const ProviderDetailsScreen = () => {
         animationType="slide"
         onRequestClose={() => setShowBookingModal(false)}
       >
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6 max-h-[90%]">
-            <View className="flex-row items-center justify-between mb-6">
-              <Text className="text-xl font-bold text-gray-800">
-                Book Service
-              </Text>
-              <TouchableOpacity onPress={() => setShowBookingModal(false)}>
-                <Ionicons name="close" size={28} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Select Date */}
-              <Text className="text-sm font-semibold text-gray-700 mb-3">
-                Select Date *
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                className="mb-6"
-              >
-                {availableDates.map((dateObj) => (
-                  <TouchableOpacity
-                    key={dateObj.value}
-                    onPress={() => setSelectedDate(dateObj.value)}
-                    className={`mr-3 px-4 py-3 rounded-xl border ${
-                      selectedDate === dateObj.value
-                        ? "bg-blue-600 border-blue-600"
-                        : "bg-white border-gray-200"
-                    }`}
-                  >
-                    <Text
-                      className={`font-medium ${
-                        selectedDate === dateObj.value
-                          ? "text-white"
-                          : "text-gray-700"
-                      }`}
-                    >
-                      {dateObj.display}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              {/* Select Time */}
-              <Text className="text-sm font-semibold text-gray-700 mb-3">
-                Select Time Slot *
-              </Text>
-              <View className="flex-row flex-wrap mb-6">
-                {availableTimes.map((time) => (
-                  <TouchableOpacity
-                    key={time}
-                    onPress={() => setSelectedTime(time)}
-                    className={`mr-2 mb-2 px-4 py-3 rounded-xl border ${
-                      selectedTime === time
-                        ? "bg-blue-600 border-blue-600"
-                        : "bg-white border-gray-200"
-                    }`}
-                  >
-                    <Text
-                      className={`font-medium ${
-                        selectedTime === time ? "text-white" : "text-gray-700"
-                      }`}
-                    >
-                      {time}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+        <KeyboardAvoidingView
+          behavior="padding"
+          style={{
+            flex: 1,
+            justifyContent: "flex-end",
+            backgroundColor: "rgba(0,0,0,0.5)",
+          }}
+        >
+          <View className="flex-1 bg-black/50 justify-end">
+            <View className="bg-white rounded-t-3xl p-6 max-h-[90%]">
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-xl font-bold text-gray-800">
+                  Book Service
+                </Text>
+                <TouchableOpacity onPress={() => setShowBookingModal(false)}>
+                  <Ionicons name="close" size={28} color="#6b7280" />
+                </TouchableOpacity>
               </View>
 
-              <Text className="text-sm font-semibold text-gray-700 mb-3">
-                Service Address *
-              </Text>
-              <BookingAddressSelector
-                onSelectLocation={(location) => {
-                  setAddress(location.formattedAddress);
-                  setServiceLocation(location);
-                }}
-                userProfileAddress={customerData?.location.address}
-                userProfileCoordinates={customerData?.location.coordinates}
-              />
-
-              {/* Photo Attachments */}
-              <Text className="text-sm font-semibold text-gray-700 mb-3">
-                Attach Photos (Optional)
-              </Text>
-              <Text className="text-xs text-gray-500 mb-3">
-                Share photos of the area or issue to help the provider prepare
-                better (max 5 photos)
-              </Text>
-
-              {attachedPhotos.length > 0 && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Select Date */}
+                <Text className="text-sm font-semibold text-gray-700 mb-3">
+                  Select Date *
+                </Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  className="mb-3"
+                  className="mb-6"
                 >
-                  {attachedPhotos.map((photo, index) => (
-                    <View key={index} className="mr-3 relative">
-                      <Image
-                        source={{ uri: photo }}
-                        className="w-24 h-24 rounded-xl"
-                      />
-                      <TouchableOpacity
-                        onPress={() => removePhoto(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 rounded-full w-6 h-6 items-center justify-center"
+                  {availableDates.map((dateObj) => (
+                    <TouchableOpacity
+                      key={dateObj.value}
+                      onPress={() => setSelectedDate(dateObj.value)}
+                      className={`mr-3 px-4 py-3 rounded-xl border ${
+                        selectedDate === dateObj.value
+                          ? "bg-blue-600 border-blue-600"
+                          : "bg-white border-gray-200"
+                      }`}
+                    >
+                      <Text
+                        className={`font-medium ${
+                          selectedDate === dateObj.value
+                            ? "text-white"
+                            : "text-gray-700"
+                        }`}
                       >
-                        <Ionicons name="close" size={16} color="white" />
-                      </TouchableOpacity>
-                    </View>
+                        {dateObj.display}
+                      </Text>
+                    </TouchableOpacity>
                   ))}
                 </ScrollView>
-              )}
 
-              {attachedPhotos.length < 5 && (
-                <TouchableOpacity
-                  onPress={handleShowPhotoOptions}
-                  disabled={uploadingPhotos}
-                  className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl py-6 items-center justify-center mb-6"
-                >
-                  {uploadingPhotos ? (
-                    <>
-                      <ActivityIndicator size="large" color="#3b82f6" />
-                      <Text className="text-gray-600 font-medium mt-2">
-                        Processing photos...
-                      </Text>
-                    </>
-                  ) : (
-                    <>
-                      <Ionicons
-                        name="images-outline"
-                        size={32}
-                        color="#6b7280"
-                      />
-                      <Text className="text-gray-600 font-medium mt-2">
-                        Add Photos
-                      </Text>
-                      <Text className="text-xs text-gray-500 mt-1">
-                        {attachedPhotos.length}/5 photos added
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              )}
-
-              {/* Additional Notes */}
-              <Text className="text-sm font-semibold text-gray-700 mb-3">
-                Additional Notes (Optional)
-              </Text>
-              <TextInput
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Any specific requirements or instructions..."
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-6 text-gray-700 h-24"
-                multiline
-                textAlignVertical="top"
-              />
-
-              {/* Summary */}
-              <View className="bg-blue-50 rounded-xl p-4 mb-6">
-                <Text className="text-sm font-semibold text-gray-700 mb-2">
-                  Booking Summary
+                {/* Select Time */}
+                <Text className="text-sm font-semibold text-gray-700 mb-3">
+                  Select Time Slot *
                 </Text>
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-sm text-gray-600">Service</Text>
-                  <Text className="text-sm font-medium text-gray-800">
-                    {service}
-                  </Text>
+                <View className="flex-row flex-wrap mb-6">
+                  {availableTimes.map((time) => (
+                    <TouchableOpacity
+                      key={time}
+                      onPress={() => setSelectedTime(time)}
+                      className={`mr-2 mb-2 px-4 py-3 rounded-xl border ${
+                        selectedTime === time
+                          ? "bg-blue-600 border-blue-600"
+                          : "bg-white border-gray-200"
+                      }`}
+                    >
+                      <Text
+                        className={`font-medium ${
+                          selectedTime === time ? "text-white" : "text-gray-700"
+                        }`}
+                      >
+                        {time}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-sm text-gray-600">Provider</Text>
-                  <Text className="text-sm font-medium text-gray-800">
-                    {name}
-                  </Text>
-                </View>
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-sm text-gray-600">Rate</Text>
-                  <Text className="text-sm font-medium text-gray-800">
-                    {price}
-                  </Text>
-                </View>
-                {selectedDate && (
-                  <View className="flex-row justify-between mb-1">
-                    <Text className="text-sm text-gray-600">Date</Text>
-                    <Text className="text-sm font-medium text-gray-800">
-                      {selectedDate}
-                    </Text>
-                  </View>
-                )}
-                {selectedTime && (
-                  <View className="flex-row justify-between mb-1">
-                    <Text className="text-sm text-gray-600">Time</Text>
-                    <Text className="text-sm font-medium text-gray-800">
-                      {selectedTime}
-                    </Text>
-                  </View>
-                )}
+
+                <Text className="text-sm font-semibold text-gray-700 mb-3">
+                  Service Address *
+                </Text>
+                <BookingAddressSelector
+                  onSelectLocation={(location) => {
+                    setAddress(location.formattedAddress);
+                    setServiceLocation(location);
+                  }}
+                  userProfileAddress={customerData?.location.address}
+                  userProfileCoordinates={customerData?.location.coordinates}
+                />
+
+                {/* Photo Attachments */}
+                <Text className="text-sm font-semibold text-gray-700 mb-3">
+                  Attach Photos (Optional)
+                </Text>
+                <Text className="text-xs text-gray-500 mb-3">
+                  Share photos of the area or issue to help the provider prepare
+                  better (max 5 photos)
+                </Text>
+
                 {attachedPhotos.length > 0 && (
-                  <View className="flex-row justify-between">
-                    <Text className="text-sm text-gray-600">
-                      Photos Attached
-                    </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    className="mb-3"
+                  >
+                    {attachedPhotos.map((photo, index) => (
+                      <View key={index} className="mr-3 relative">
+                        <Image
+                          source={{ uri: photo }}
+                          className="w-24 h-24 rounded-xl"
+                        />
+                        <TouchableOpacity
+                          onPress={() => removePhoto(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 rounded-full w-6 h-6 items-center justify-center"
+                        >
+                          <Ionicons name="close" size={16} color="white" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </ScrollView>
+                )}
+
+                {attachedPhotos.length < 5 && (
+                  <TouchableOpacity
+                    onPress={handleShowPhotoOptions}
+                    disabled={uploadingPhotos}
+                    className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl py-6 items-center justify-center mb-6"
+                  >
+                    {uploadingPhotos ? (
+                      <>
+                        <ActivityIndicator size="large" color="#3b82f6" />
+                        <Text className="text-gray-600 font-medium mt-2">
+                          Processing photos...
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Ionicons
+                          name="images-outline"
+                          size={32}
+                          color="#6b7280"
+                        />
+                        <Text className="text-gray-600 font-medium mt-2">
+                          Add Photos
+                        </Text>
+                        <Text className="text-xs text-gray-500 mt-1">
+                          {attachedPhotos.length}/5 photos added
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
+
+                {/* Additional Notes */}
+                <Text className="text-sm font-semibold text-gray-700 mb-3">
+                  Additional Notes (Optional)
+                </Text>
+                <TextInput
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder="Any specific requirements or instructions..."
+                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-6 text-gray-700 h-24"
+                  multiline
+                  textAlignVertical="top"
+                />
+
+                {/* Summary */}
+                <View className="bg-blue-50 rounded-xl p-4 mb-6">
+                  <Text className="text-sm font-semibold text-gray-700 mb-2">
+                    Booking Summary
+                  </Text>
+                  <View className="flex-row justify-between mb-1">
+                    <Text className="text-sm text-gray-600">Service</Text>
                     <Text className="text-sm font-medium text-gray-800">
-                      {attachedPhotos.length} photo
-                      {attachedPhotos.length > 1 ? "s" : ""}
+                      {service}
                     </Text>
                   </View>
-                )}
-              </View>
+                  <View className="flex-row justify-between mb-1">
+                    <Text className="text-sm text-gray-600">Provider</Text>
+                    <Text className="text-sm font-medium text-gray-800">
+                      {name}
+                    </Text>
+                  </View>
+                  <View className="flex-row justify-between mb-1">
+                    <Text className="text-sm text-gray-600">Rate</Text>
+                    <Text className="text-sm font-medium text-gray-800">
+                      {price}
+                    </Text>
+                  </View>
+                  {selectedDate && (
+                    <View className="flex-row justify-between mb-1">
+                      <Text className="text-sm text-gray-600">Date</Text>
+                      <Text className="text-sm font-medium text-gray-800">
+                        {selectedDate}
+                      </Text>
+                    </View>
+                  )}
+                  {selectedTime && (
+                    <View className="flex-row justify-between mb-1">
+                      <Text className="text-sm text-gray-600">Time</Text>
+                      <Text className="text-sm font-medium text-gray-800">
+                        {selectedTime}
+                      </Text>
+                    </View>
+                  )}
+                  {attachedPhotos.length > 0 && (
+                    <View className="flex-row justify-between">
+                      <Text className="text-sm text-gray-600">
+                        Photos Attached
+                      </Text>
+                      <Text className="text-sm font-medium text-gray-800">
+                        {attachedPhotos.length} photo
+                        {attachedPhotos.length > 1 ? "s" : ""}
+                      </Text>
+                    </View>
+                  )}
+                </View>
 
-              {/* Confirm Button */}
-              <TouchableOpacity
-                onPress={handleBookNow}
-                className="bg-blue-600 py-4 rounded-xl flex-row items-center justify-center mb-4"
-              >
-                <Ionicons name="checkmark-circle" size={24} color="white" />
-                <Text className="text-white font-bold text-base ml-2">
-                  Confirm Booking
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
+                {/* Confirm Button */}
+                <TouchableOpacity
+                  onPress={handleBookNow}
+                  className="bg-blue-600 py-4 rounded-xl flex-row items-center justify-center mb-4"
+                >
+                  <Ionicons name="checkmark-circle" size={24} color="white" />
+                  <Text className="text-white font-bold text-base ml-2">
+                    Confirm Booking
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

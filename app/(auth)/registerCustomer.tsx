@@ -6,8 +6,6 @@ import {
   Alert,
   Image,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -15,6 +13,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import colors from "tailwindcss/colors";
 import { useCustomer } from "../context/CustomerContext";
 import { registerWithFirebase } from "../services/authService";
@@ -497,9 +496,10 @@ export default function RegisterCustomer() {
   );
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-white"
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <KeyboardAwareScrollView
+      contentContainerStyle={{ flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={20}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View className="flex-1">
@@ -571,6 +571,6 @@ export default function RegisterCustomer() {
           </ScrollView>
         </View>
       </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
