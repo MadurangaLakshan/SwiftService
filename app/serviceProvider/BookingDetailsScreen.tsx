@@ -493,7 +493,9 @@ const BookingDetailsScreen = () => {
     <View className="flex-1 bg-gray-50">
       <View className="bg-white px-6 pt-12 pb-4 border-b border-gray-200">
         <View className="flex-row items-center justify-between">
-          <TouchableOpacity onPress={() => router.back()} className="mr-4">
+          <TouchableOpacity
+            onPress={() => router.replace("/serviceProvider/BookingsScreen")}
+          >
             <Ionicons name="arrow-back" size={24} color="black" />
           </TouchableOpacity>
           <Text className="flex-1 text-xl font-bold text-gray-800">

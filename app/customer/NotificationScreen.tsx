@@ -61,7 +61,9 @@ const NotificationsScreen = () => {
       await markNotificationAsRead(notification._id);
       // Update local state
       setNotifications((prev) =>
-        prev.map((n) => (n._id === notification._id ? { ...n, read: true } : n))
+        prev.map((n) =>
+          n._id === notification._id ? { ...n, read: true } : n,
+        ),
       );
     }
 
@@ -140,7 +142,9 @@ const NotificationsScreen = () => {
       {/* Header */}
       <View className="px-6 pt-12 pb-4 bg-white border-b border-gray-200">
         <View className="flex-row items-center justify-between">
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity
+            onPress={() => router.replace("/customer/HomeScreen")}
+          >
             <Ionicons name="arrow-back" size={24} color="black" />
           </TouchableOpacity>
           <Text className="text-xl font-bold text-gray-800">Notifications</Text>
