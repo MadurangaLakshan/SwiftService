@@ -32,7 +32,7 @@ router.put(
 );
 
 // Approve or reject a booking request
-router.post(
+router.put(
   "/:bookingId/approve",
   authenticateUser,
   bookingController.approveCompletedWork,
@@ -51,6 +51,10 @@ router.post(
 );
 
 // Cancel a booking
-router.delete("/:bookingId", authenticateUser, bookingController.cancelBooking);
+router.put(
+  "/:bookingId/cancel",
+  authenticateUser,
+  bookingController.cancelBooking,
+);
 
 export default router;
