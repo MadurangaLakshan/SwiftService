@@ -44,6 +44,7 @@ const BookingsScreen = () => {
     "pending",
     "confirmed",
     "in-progress",
+    "awaiting-approval",
     "completed",
     "cancelled",
   ];
@@ -112,6 +113,8 @@ const BookingsScreen = () => {
         return "bg-blue-100 text-blue-700";
       case "in-progress":
         return "bg-purple-100 text-purple-700";
+      case "awaiting-customer-approval":
+        return "bg-orange-100 text-orange-700";
       case "completed":
         return "bg-green-100 text-green-700";
       case "cancelled":
@@ -123,6 +126,7 @@ const BookingsScreen = () => {
 
   const formatStatusLabel = (status: string) => {
     if (status === "in-progress") return "In Progress";
+    if (status === "awaiting-customer-approval") return "Awaiting Approval";
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
 

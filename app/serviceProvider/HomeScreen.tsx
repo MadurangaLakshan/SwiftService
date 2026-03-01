@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -23,6 +24,7 @@ interface Booking {
     name: string;
     phone: string;
     email: string;
+    image?: string;
   };
   category: string;
   status: string;
@@ -156,9 +158,14 @@ const HomeScreen = () => {
   };
 
   const getStatusLabel = (status: string) => {
-    return status === "in-progress"
-      ? "In Progress"
-      : status.charAt(0).toUpperCase() + status.slice(1);
+    if (status === "awaiting-customer-approval") {
+      return "Awaiting Approval";
+    }
+    if (status === "in-progress") {
+      return "In Progress";
+    }
+
+    return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
   const performanceData = {
@@ -323,9 +330,17 @@ const HomeScreen = () => {
                     }
                   >
                     <View className="flex-row">
-                      <View className="w-14 h-14 rounded-xl bg-blue-100 items-center justify-center">
-                        <Text className="text-2xl">👤</Text>
-                      </View>
+                      {/* <View className="w-14 h-14 rounded-xl bg-blue-100 items-center justify-center">
+                        <Text className="text-2xl"></Text>
+                      </View> */}
+                      <Image
+                        source={{
+                          uri:
+                            booking.customerDetails.image ||
+                            `https://i.pravatar.cc/150?u=${booking.customerDetails.email}`,
+                        }}
+                        className="w-14 h-14 rounded-xl"
+                      />
 
                       <View className="flex-1 ml-4">
                         <View className="flex-row items-center justify-between mb-1">
