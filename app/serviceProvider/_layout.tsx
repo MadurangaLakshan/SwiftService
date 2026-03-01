@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React, { useEffect } from "react";
-import { Text, View } from "react-native";
+import { Platform, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProviderProvider } from "../context/ProviderContext";
 import { useMessageStore } from "../store/messageStore";
 
@@ -59,6 +60,7 @@ const MessagesIconWithBadge = ({ color }: { color: string }) => {
 };
 
 export default function ProviderLayout() {
+  const insets = useSafeAreaInsets();
   return (
     <ProviderProvider>
       <Tabs
@@ -68,9 +70,9 @@ export default function ProviderLayout() {
             backgroundColor: "white",
             borderTopWidth: 1,
             borderTopColor: "#e5e7eb",
-            paddingBottom: 24,
+            paddingBottom: Platform.OS === "android" ? insets.bottom + 12 : 24,
             paddingTop: 12,
-            height: 88,
+            height: Platform.OS === "android" ? 64 + insets.bottom : 88,
           },
           tabBarActiveTintColor: "#3b82f6",
           tabBarInactiveTintColor: "#9ca3af",
