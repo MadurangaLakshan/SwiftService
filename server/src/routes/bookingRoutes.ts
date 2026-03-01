@@ -45,7 +45,7 @@ router.post(
 
 //Update Work Documentation
 router.post(
-  "/:bookingId/documentation",
+  "/:bookingId/work-documentation",
   authenticateUser,
   bookingController.updateWorkDocumentation,
 );
