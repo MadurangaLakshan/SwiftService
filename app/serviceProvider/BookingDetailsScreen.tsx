@@ -956,13 +956,6 @@ const BookingDetailsScreen = () => {
             </TouchableOpacity>
           </View>
         )}
-
-        <View className="mx-6 mt-4 mb-6 bg-gray-100 rounded-2xl p-4">
-          <Text className="text-xs text-gray-500 mb-1">Booking ID</Text>
-          <Text className="text-sm font-mono font-semibold text-gray-800">
-            #{booking._id.slice(-8).toUpperCase()}
-          </Text>
-        </View>
       </ScrollView>
       {/* Action Buttons */}
       {booking.status === "pending" && (

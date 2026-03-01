@@ -245,39 +245,74 @@ const TrackingScreen: React.FC<TrackingScreenProps> = ({
             }}
             anchor={{ x: 0.5, y: 0.5 }}
             rotation={trackingData.providerLocation.heading || 0}
+            // FIX: Helps prevent the "box" artifact and improves performance
+            tracksViewChanges={false}
           >
             <Animated.View
               style={{
                 transform: [{ scale: pulseAnim }],
+                backgroundColor: "transparent", // FIX: Ensure no background color
+                alignItems: "center",
+                justifyContent: "center",
               }}
-              className="items-center justify-center"
             >
-              <View className="w-16 h-16 bg-blue-600 rounded-full items-center justify-center border-4 border-white shadow-lg">
-                {trackingData.providerDetails.profilePhoto ? (
-                  <Image
-                    source={{ uri: trackingData.providerDetails.profilePhoto }}
-                    className="w-full h-full rounded-full"
-                  />
-                ) : (
-                  <Ionicons name="person" size={28} color="white" />
-                )}
+              {/* Ensure the outer container doesn't have overflow issues */}
+              <View
+                style={{
+                  width: 64,
+                  height: 64,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <View className="w-16 h-16 bg-blue-600 rounded-full items-center justify-center border-4 border-white shadow-lg overflow-hidden">
+                  {trackingData.providerDetails.profilePhoto ? (
+                    <Image
+                      source={{
+                        uri: trackingData.providerDetails.profilePhoto,
+                      }}
+                      className="w-full h-full"
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Ionicons name="person" size={28} color="white" />
+                  )}
+                </View>
+                <View className="absolute -bottom-2 w-4 h-4 bg-blue-600 rounded-full border-2 border-white" />
               </View>
-              <View className="absolute -bottom-2 w-4 h-4 bg-blue-600 rounded-full border-2 border-white" />
             </Animated.View>
           </Marker>
         )}
 
+        {/* Destination Marker */}
         {/* Destination Marker */}
         <Marker
           coordinate={{
             latitude: trackingData.serviceLocation.latitude,
             longitude: trackingData.serviceLocation.longitude,
           }}
+          // Prevents the map from constantly re-drawing the marker "box"
+          tracksViewChanges={false}
         >
-          <View className="items-center">
-            <View className="bg-red-600 rounded-full p-3 border-4 border-white shadow-lg">
+          {/* Explicitly transparent container */}
+          <View
+            style={{ backgroundColor: "transparent", alignItems: "center" }}
+          >
+            <View
+              className="bg-red-600 rounded-full p-3 border-4 border-white"
+              style={{
+                // Using inline shadow for better compatibility with Map Markers
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.84,
+                elevation: 5,
+              }}
+            >
               <Ionicons name="home" size={24} color="white" />
             </View>
+
+            {/* The little pin point at the bottom */}
             <View className="w-2 h-2 bg-red-600 rounded-full mt-1" />
           </View>
         </Marker>
