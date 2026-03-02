@@ -238,6 +238,40 @@ export const updateProvider = async (
   }
 };
 
+export const adminUpdateProviderStatus = async (
+  req: express.Request,
+  res: express.Response,
+) => {
+  try {
+    const { providerId } = req.params;
+    const { verified } = req.body;
+
+    const provider = await Provider.findByIdAndUpdate(
+      providerId,
+      { verified },
+      { new: true },
+    );
+
+    if (!provider) {
+      return res.status(404).json({
+        success: false,
+        error: "Provider not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Provider ${verified ? "verified" : "unverified"} successfully`,
+      data: provider,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
 export const deleteProvider = async (
   req: AuthRequest,
   res: express.Response,

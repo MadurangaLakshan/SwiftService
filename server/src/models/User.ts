@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export interface IUser extends Document {
   userId: string;
-  userType: "provider" | "customer";
+  userType: "provider" | "customer" | "admin";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,11 +17,11 @@ const UserSchema: Schema = new Schema(
     },
     userType: {
       type: String,
-      enum: ["provider", "customer"],
+      enum: ["provider", "customer", "admin"],
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.model<IUser>("User", UserSchema);

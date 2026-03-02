@@ -1,10 +1,20 @@
 import express from "express";
 import Customer from "../models/Customer";
 import Provider from "../models/Provider";
+import User from "../models/User";
 
 export async function getUserType(req: express.Request, res: express.Response) {
   try {
     const { userId } = req.params;
+
+    const user = await User.findOne({ userId });
+    if (user && user.userType === "admin") {
+      return res.json({
+        success: true,
+        userType: "admin",
+        userData: user,
+      });
+    }
 
     const provider = await Provider.findOne({ userId });
     if (provider) {

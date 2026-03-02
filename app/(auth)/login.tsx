@@ -56,6 +56,7 @@ export default function LoginScreen() {
       console.log("User logged in:", userId);
 
       const userTypeResult = await getUserType(userId);
+      console.log("userTypeResult:", userTypeResult);
 
       if (!userTypeResult.success) {
         setError("Failed to fetch user information");
@@ -66,6 +67,8 @@ export default function LoginScreen() {
         router.replace("/serviceProvider/HomeScreen");
       } else if (userTypeResult.userType === "customer") {
         router.replace("/customer/HomeScreen");
+      } else if (userTypeResult.userType === "admin") {
+        router.replace("/admin/ApprovalsScreen");
       } else {
         setError("Unknown user type");
       }
