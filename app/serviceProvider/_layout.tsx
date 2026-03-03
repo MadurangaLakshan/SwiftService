@@ -169,6 +169,12 @@ export default function ProviderLayout() {
             href: null,
           }}
         />
+        <Tabs.Screen
+          name="AvailabilityScreen"
+          options={{
+            href: null,
+          }}
+        />
       </Tabs>
     </ProviderProvider>
   );

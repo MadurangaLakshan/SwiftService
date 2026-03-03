@@ -56,7 +56,6 @@ export default function LoginScreen() {
       console.log("User logged in:", userId);
 
       const userTypeResult = await getUserType(userId);
-      console.log("userTypeResult:", userTypeResult);
 
       if (!userTypeResult.success) {
         setError("Failed to fetch user information");
@@ -73,7 +72,7 @@ export default function LoginScreen() {
         setError("Unknown user type");
       }
     } catch (error: any) {
-      console.error("Login error:", error.code, error.message);
+      console.log("Login error:", error.code, error.message);
 
       // Handle specific Firebase errors
       switch (error.code) {

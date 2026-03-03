@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +17,7 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useCustomer } from "../context/CustomerContext";
 import { createBooking } from "../services/bookingService";
 import { createConversation } from "../services/messageService";
+import { getProviderAvailability } from "../services/providerService";
 import { getProviderReviews } from "../services/reviewService";
 import BookingAddressSelector from "../utils/BookingAddressSelector.tsx";
 import {
@@ -70,67 +71,28 @@ const ProviderDetailsScreen = () => {
   const [reviewsData, setReviewsData] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
-
-  const availableDates = useMemo(() => {
-    const dates = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    for (let i = 0; i < 10; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-
-      const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "short" });
-
-      const monthDay = date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-
-      let displayLabel;
-      if (i === 0) {
-        displayLabel = `Today, ${monthDay}`;
-      } else if (i === 1) {
-        displayLabel = `Tomorrow, ${monthDay}`;
-      } else {
-        displayLabel = `${dayOfWeek}, ${monthDay}`;
-      }
-
-      const fullDate = date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-
-      dates.push({
-        display: displayLabel,
-        value: fullDate,
-        date: date,
-      });
-    }
-
-    return dates;
-  }, []);
-
-  const availableTimes = [
-    "9:00 AM - 11:00 AM",
-    "11:00 AM - 1:00 PM",
-    "2:00 PM - 4:00 PM",
-    "4:00 PM - 6:00 PM",
-  ];
+  const [providerAvailability, setProviderAvailability] = useState<
+    {
+      date: string;
+      dayName: string;
+      isAvailable: boolean;
+      slots: string[];
+    }[]
+  >([]);
+  const [loadingAvailability, setLoadingAvailability] = useState(true);
+  const [availableTimesForDate, setAvailableTimesForDate] = useState<string[]>(
+    [],
+  );
 
   React.useEffect(() => {
     const fetchReviews = async () => {
       if (!userId) return;
-
       try {
         setLoadingReviews(true);
         const response = await getProviderReviews(userId as string);
-
         const reviewsArray = Array.isArray(response?.data?.data?.reviews)
           ? response.data.data.reviews
           : [];
-
         setReviewsData(reviewsArray.slice(0, 3));
       } catch (error) {
         console.error("Error fetching reviews:", error);
@@ -143,24 +105,85 @@ const ProviderDetailsScreen = () => {
     fetchReviews();
   }, [userId]);
 
+  React.useEffect(() => {
+    const fetchAvailability = async () => {
+      if (!userId) return;
+      try {
+        setLoadingAvailability(true);
+        const response = await getProviderAvailability(userId as string);
+
+        if (response.success && response.data) {
+          const actualData = Array.isArray(response.data)
+            ? response.data
+            : response.data.data;
+
+          const today = getLocalDateString();
+          const filtered = actualData.filter(
+            (d: any) => d.isAvailable && d.slots.length > 0 && d.date >= today,
+          );
+          setProviderAvailability(filtered);
+        }
+      } catch (error) {
+        console.log("Error fetching availability:", error);
+      } finally {
+        setLoadingAvailability(false);
+      }
+    };
+
+    fetchAvailability();
+  }, [userId]);
+
+  const handleDateSelect = (date: string) => {
+    if (selectedDate === date) {
+      // Clicking same date deselects it
+      setSelectedDate("");
+      setSelectedTime("");
+      setAvailableTimesForDate([]);
+    } else {
+      setSelectedDate(date);
+      setSelectedTime("");
+      const dayData = providerAvailability.find((d) => d.date === date);
+      setAvailableTimesForDate(dayData ? dayData.slots : []);
+    }
+  };
+
+  const getLocalDateString = (date: Date = new Date()): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatAvailableDate = (dateString: string, dayName: string): string => {
+    const today = new Date().toISOString().split("T")[0];
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowString = tomorrow.toISOString().split("T")[0];
+
+    const date = new Date(dateString + "T00:00:00");
+    const monthDay = date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+
+    if (dateString === today) return `Today, ${monthDay}`;
+    if (dateString === tomorrowString) return `Tomorrow, ${monthDay}`;
+    return `${dayName}, ${monthDay}`;
+  };
+
   const pickImages = async () => {
     if (attachedPhotos.length >= 5) {
       Alert.alert("Limit Reached", "You can only attach up to 5 photos.");
       return;
     }
-
     try {
       setUploadingPhotos(true);
-
       const maxToSelect = 5 - attachedPhotos.length;
       const imageUris = await pickMultipleImages(maxToSelect);
-
       if (imageUris.length > 0) {
-        // Convert all selected images to base64
         const base64Promises = imageUris.map((uri) =>
           convertImageToBase64(uri),
         );
-
         const base64Images = await Promise.all(base64Promises);
         setAttachedPhotos([...attachedPhotos, ...base64Images]);
       }
@@ -177,12 +200,9 @@ const ProviderDetailsScreen = () => {
       Alert.alert("Limit Reached", "You can only attach up to 5 photos.");
       return;
     }
-
     try {
       setUploadingPhotos(true);
-
       const photoUri = await takePhoto();
-
       if (photoUri) {
         const base64Image = await convertImageToBase64(photoUri);
         setAttachedPhotos([...attachedPhotos, base64Image]);
@@ -229,7 +249,7 @@ const ProviderDetailsScreen = () => {
         additionalNotes: notes,
         hourlyRate: hourlyRate,
         estimatedHours: 1,
-        customerAttachedPhotos: attachedPhotos, // Base64 images
+        customerAttachedPhotos: attachedPhotos,
       };
 
       const bookingResult = await createBooking(bookingPayload);
@@ -243,13 +263,10 @@ const ProviderDetailsScreen = () => {
 
       router.push({
         pathname: "/customer/BookingDetailsScreen",
-        params: {
-          bookingId: bookingData._id,
-        },
+        params: { bookingId: bookingData._id },
       });
 
       setShowBookingModal(false);
-      // Reset form
       setSelectedDate("");
       setSelectedTime("");
       setAddress("");
@@ -272,16 +289,13 @@ const ProviderDetailsScreen = () => {
   const handleMessage = async () => {
     try {
       const response = await createConversation(userId as string);
-
       if (response.success && response.data) {
         const conversationId =
           response.data.conversationId || response.data._id;
-
         if (!conversationId) {
           alert("Failed to get conversation ID");
           return;
         }
-
         router.push({
           pathname: "/customer/ChatScreen",
           params: {
@@ -372,7 +386,6 @@ const ProviderDetailsScreen = () => {
             ))}
           </View>
 
-          {/* Message and Call Buttons */}
           <View className="flex-row gap-3">
             <TouchableOpacity
               onPress={handleMessage}
@@ -482,7 +495,6 @@ const ProviderDetailsScreen = () => {
                       {review.customerName || `Customer ${index + 1}`}
                     </Text>
                     <Text>{review.review}</Text>
-
                     <View className="flex-row items-center">
                       {[...Array(5)].map((_, starIndex) => (
                         <Ionicons
@@ -549,60 +561,93 @@ const ProviderDetailsScreen = () => {
                 <Text className="text-sm font-semibold text-gray-700 mb-3">
                   Select Date *
                 </Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  className="mb-6"
-                >
-                  {availableDates.map((dateObj) => (
-                    <TouchableOpacity
-                      key={dateObj.value}
-                      onPress={() => setSelectedDate(dateObj.value)}
-                      className={`mr-3 px-4 py-3 rounded-xl border ${
-                        selectedDate === dateObj.value
-                          ? "bg-blue-600 border-blue-600"
-                          : "bg-white border-gray-200"
-                      }`}
-                    >
-                      <Text
-                        className={`font-medium ${
-                          selectedDate === dateObj.value
-                            ? "text-white"
-                            : "text-gray-700"
+
+                {loadingAvailability ? (
+                  <ActivityIndicator
+                    size="small"
+                    color="#3b82f6"
+                    style={{ marginBottom: 24 }}
+                  />
+                ) : providerAvailability.length === 0 ? (
+                  <View className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+                    <Text className="text-yellow-700 text-sm text-center">
+                      This provider has not set their availability yet. Please
+                      message them directly.
+                    </Text>
+                  </View>
+                ) : (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    className="mb-6"
+                  >
+                    {providerAvailability.map((dayData) => (
+                      <TouchableOpacity
+                        key={dayData.date}
+                        onPress={() => handleDateSelect(dayData.date)}
+                        className={`mr-3 px-4 py-3 rounded-xl border ${
+                          selectedDate === dayData.date
+                            ? "bg-blue-600 border-blue-600"
+                            : "bg-white border-gray-200"
                         }`}
                       >
-                        {dateObj.display}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                        <Text
+                          className={`font-medium ${
+                            selectedDate === dayData.date
+                              ? "text-white"
+                              : "text-gray-700"
+                          }`}
+                        >
+                          {formatAvailableDate(dayData.date, dayData.dayName)}
+                        </Text>
+                        <Text
+                          className={`text-xs mt-0.5 ${
+                            selectedDate === dayData.date
+                              ? "text-blue-100"
+                              : "text-gray-400"
+                          }`}
+                        >
+                          {dayData.slots.length} slot
+                          {dayData.slots.length !== 1 ? "s" : ""}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
 
                 {/* Select Time */}
-                <Text className="text-sm font-semibold text-gray-700 mb-3">
-                  Select Time Slot *
-                </Text>
-                <View className="flex-row flex-wrap mb-6">
-                  {availableTimes.map((time) => (
-                    <TouchableOpacity
-                      key={time}
-                      onPress={() => setSelectedTime(time)}
-                      className={`mr-2 mb-2 px-4 py-3 rounded-xl border ${
-                        selectedTime === time
-                          ? "bg-blue-600 border-blue-600"
-                          : "bg-white border-gray-200"
-                      }`}
-                    >
-                      <Text
-                        className={`font-medium ${
-                          selectedTime === time ? "text-white" : "text-gray-700"
-                        }`}
-                      >
-                        {time}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                {selectedDate && availableTimesForDate.length > 0 && (
+                  <>
+                    <Text className="text-sm font-semibold text-gray-700 mb-3">
+                      Select Time Slot *
+                    </Text>
+                    <View className="flex-row flex-wrap mb-6">
+                      {availableTimesForDate.map((time) => (
+                        <TouchableOpacity
+                          key={time}
+                          onPress={() => setSelectedTime(time)}
+                          className={`mr-2 mb-2 px-4 py-3 rounded-xl border ${
+                            selectedTime === time
+                              ? "bg-blue-600 border-blue-600"
+                              : "bg-white border-gray-200"
+                          }`}
+                        >
+                          <Text
+                            className={`font-medium ${
+                              selectedTime === time
+                                ? "text-white"
+                                : "text-gray-700"
+                            }`}
+                          >
+                            {time}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
 
+                {/* Service Address */}
                 <Text className="text-sm font-semibold text-gray-700 mb-3">
                   Service Address *
                 </Text>

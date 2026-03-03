@@ -891,7 +891,7 @@ const BookingDetailsScreen = () => {
             <View className="flex-row justify-between py-2">
               <Text className="text-gray-600">Hourly Rate</Text>
               <Text className="text-gray-800 font-medium">
-                ${booking.pricing.hourlyRate}/hr
+                Rs: {booking.pricing.hourlyRate}/hr
               </Text>
             </View>
             <View className="flex-row justify-between py-2">
@@ -907,7 +907,7 @@ const BookingDetailsScreen = () => {
             <View className="flex-row justify-between py-2">
               <Text className="text-gray-600">Service Fee</Text>
               <Text className="text-gray-800 font-medium">
-                $
+                Rs:
                 {booking.pricing.hourlyRate *
                   (booking.pricing.actualHours ||
                     booking.pricing.estimatedHours)}
@@ -916,7 +916,7 @@ const BookingDetailsScreen = () => {
             <View className="flex-row justify-between py-2">
               <Text className="text-gray-600">Platform Fee</Text>
               <Text className="text-gray-800 font-medium">
-                ${booking.pricing.platformFee}
+                Rs: {booking.pricing.platformFee}
               </Text>
             </View>
             <View className="flex-row justify-between py-2 border-t border-gray-200 pt-3">
@@ -926,7 +926,7 @@ const BookingDetailsScreen = () => {
                   : "Estimated Total"}
               </Text>
               <Text className="text-lg font-bold text-green-600">
-                ${booking.pricing.finalAmount || booking.pricing.totalAmount}
+                Rs: {booking.pricing.finalAmount || booking.pricing.totalAmount}
               </Text>
             </View>
             {!booking.pricing.actualHours && (

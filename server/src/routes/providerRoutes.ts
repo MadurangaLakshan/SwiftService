@@ -9,6 +9,16 @@ router.post("/register", authenticateUser, providerController.registerProvider);
 //Get all providers
 router.get("/", providerController.getAllProviders);
 
+// Get provider availability
+router.get("/:userId/availability", providerController.getAvailability);
+
+// Update provider availability
+router.put(
+  "/:userId/availability",
+  authenticateUser,
+  providerController.updateAvailability,
+);
+
 //Get provider by userId
 router.get("/:userId", providerController.getProviderById);
 

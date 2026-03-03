@@ -22,6 +22,12 @@ export interface IProvider extends Document {
       longitude: Number;
     };
   };
+  availability?: {
+    date: string;
+    dayName: string;
+    isAvailable: boolean;
+    slots: string[];
+  }[];
   rating: number;
   totalJobs: number;
   totalReviews: number;
@@ -87,6 +93,14 @@ const ProviderSchema: Schema = new Schema(
         longitude: { type: Number },
       },
     },
+    availability: [
+      {
+        date: { type: String, required: true },
+        dayName: { type: String, required: true },
+        isAvailable: { type: Boolean, default: false },
+        slots: [{ type: String }],
+      },
+    ],
     rating: {
       type: Number,
       default: 0,
@@ -111,7 +125,7 @@ const ProviderSchema: Schema = new Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 ProviderSchema.index({ services: 1, "location.city": 1 });

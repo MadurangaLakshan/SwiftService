@@ -138,3 +138,24 @@ export const getPendingProviders = async () => {
     return { success: false, error: error.message };
   }
 };
+
+export const getProviderAvailability = async (userId: string) => {
+  return authenticatedRequest(`/providers/${userId}/availability`, {
+    method: "GET",
+  });
+};
+
+export const updateProviderAvailability = async (
+  userId: string,
+  availability: {
+    date: string;
+    dayName: string;
+    isAvailable: boolean;
+    slots: string[];
+  }[],
+) => {
+  return authenticatedRequest(`/providers/${userId}/availability`, {
+    method: "PUT",
+    body: JSON.stringify({ availability }),
+  });
+};

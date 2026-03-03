@@ -173,7 +173,7 @@ const HomeScreen = () => {
     earned: bookings
       .filter((b) => b.status === "completed")
       .reduce((sum, b) => sum + b.pricing.totalAmount, 0),
-    rating: 4.8,
+    rating: 0,
   };
 
   if (providerLoading || loading) {

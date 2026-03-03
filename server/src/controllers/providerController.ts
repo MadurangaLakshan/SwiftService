@@ -308,3 +308,61 @@ export const deleteProvider = async (
     });
   }
 };
+
+export const getAvailability = async (
+  req: express.Request,
+  res: express.Response,
+) => {
+  try {
+    const provider = await Provider.findOne({ userId: req.params.userId });
+
+    if (!provider) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Provider not found" });
+    }
+
+    res.json({ success: true, data: provider.availability || [] });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const updateAvailability = async (
+  req: AuthRequest,
+  res: express.Response,
+) => {
+  try {
+    if (req.user?.uid !== req.params.userId) {
+      return res.status(403).json({ success: false, error: "Unauthorized" });
+    }
+
+    const { availability } = req.body;
+
+    if (!Array.isArray(availability)) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Availability must be an array" });
+    }
+
+    const provider = await Provider.findOneAndUpdate(
+      { userId: req.params.userId },
+      { $set: { availability } },
+      { new: true, runValidators: true },
+    );
+
+    if (!provider) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Provider not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Availability updated successfully",
+      data: provider.availability,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
