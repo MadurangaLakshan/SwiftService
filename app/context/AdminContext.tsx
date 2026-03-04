@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { updateProviderStatus } from "../services/adminService";
-import { getAllProviders } from "../services/providerService";
+import {
+  adminGetAllProviders,
+  updateProviderStatus,
+} from "../services/adminService";
 
 interface ProviderData {
   _id: string;
@@ -20,15 +22,13 @@ interface ProviderData {
     city: string;
     postalCode: string;
     serviceRadius: number;
-    coordinates: {
-      latitude: number;
-      longitude: number;
-    };
+    coordinates: { latitude: number; longitude: number };
   };
   rating: number;
   totalJobs: number;
   totalReviews: number;
   verified: boolean;
+  status?: string;
   isActive: boolean;
   profilePhoto?: string;
   createdAt: string;
@@ -41,6 +41,7 @@ interface AdminContextType {
   error: string | null;
   refreshList: () => Promise<void>;
   approveProvider: (id: string) => Promise<boolean>;
+  rejectProvider: (id: string) => Promise<boolean>;
 }
 
 const AdminContext = createContext<AdminContextType>({
@@ -49,6 +50,7 @@ const AdminContext = createContext<AdminContextType>({
   error: null,
   refreshList: async () => {},
   approveProvider: async () => false,
+  rejectProvider: async () => false,
 });
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -62,15 +64,15 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({
     setLoading(true);
     setError(null);
     try {
-      const response = await getAllProviders();
-
-      // Determine if response is the array itself or contains a .data property
+      const response = await adminGetAllProviders();
       const data = response?.data?.data || response?.data || [];
 
-      if (data && Array.isArray(data)) {
-        // Filter for unverified providers
-        const unverified = data.filter((p: ProviderData) => !p.verified);
-        setPendingProviders(unverified);
+      if (Array.isArray(data)) {
+        // Show only unverified, non-rejected providers
+        const pending = data.filter(
+          (p: ProviderData) => !p.verified && p.status !== "rejected",
+        );
+        setPendingProviders(pending);
       } else {
         setError("Invalid data format received from server");
       }
@@ -84,9 +86,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const approveProvider = async (id: string) => {
     try {
-      // Passing 'true' directly as a boolean
       const response = await updateProviderStatus(id, true);
-
       if (response.success) {
         await fetchPending();
         return true;
@@ -94,6 +94,20 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({
       return false;
     } catch (err) {
       console.error("Approval error:", err);
+      return false;
+    }
+  };
+
+  const rejectProvider = async (id: string) => {
+    try {
+      const response = await updateProviderStatus(id, false, "rejected");
+      if (response.success) {
+        await fetchPending();
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Rejection error:", err);
       return false;
     }
   };
@@ -110,6 +124,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({
         error,
         refreshList: fetchPending,
         approveProvider,
+        rejectProvider,
       }}
     >
       {children}

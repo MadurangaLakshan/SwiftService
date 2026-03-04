@@ -32,6 +32,7 @@ export interface IProvider extends Document {
   totalJobs: number;
   totalReviews: number;
   verified: boolean;
+  status: "pending" | "active" | "rejected"; // ADD
   isActive: boolean;
   profilePhoto?: string;
   createdAt: Date;
@@ -118,6 +119,12 @@ const ProviderSchema: Schema = new Schema(
       min: 0,
     },
     verified: { type: Boolean, default: false },
+    status: {
+      // ADD
+      type: String,
+      enum: ["pending", "active", "rejected"],
+      default: "pending",
+    },
     isActive: { type: Boolean, default: true },
     profilePhoto: { type: String, default: "" },
   },

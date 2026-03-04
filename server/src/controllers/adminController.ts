@@ -2,38 +2,7 @@ import express from "express";
 import Booking from "../models/Booking";
 import Provider from "../models/Provider";
 
-// PATCH /admin/providers/:providerId/verify
-export const adminUpdateProviderStatus = async (
-  req: express.Request,
-  res: express.Response,
-) => {
-  try {
-    const { providerId } = req.params;
-    const { verified } = req.body;
-
-    const provider = await Provider.findByIdAndUpdate(
-      providerId,
-      { verified },
-      { new: true },
-    );
-
-    if (!provider) {
-      return res
-        .status(404)
-        .json({ success: false, error: "Provider not found" });
-    }
-
-    res.json({
-      success: true,
-      message: `Provider ${verified ? "verified" : "unverified"} successfully`,
-      data: provider,
-    });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-};
-
-// GET /admin/providers - all providers (for pending approvals etc.)
+// GET /admin/providers - all providers
 export const adminGetAllProviders = async (
   req: express.Request,
   res: express.Response,
@@ -46,9 +15,46 @@ export const adminGetAllProviders = async (
   }
 };
 
-// ─── DISPUTE MANAGEMENT ─────────────────────────────────────────────────────
+// PATCH /admin/providers/:providerId/verify
+// body: { verified: boolean, status?: "rejected" }
+export const adminUpdateProviderStatus = async (
+  req: express.Request,
+  res: express.Response,
+) => {
+  try {
+    const { providerId } = req.params;
+    const { verified, status } = req.body;
 
-// GET /admin/disputes - all bookings with status "disputed"
+    const updatePayload: any = { verified };
+    if (status) updatePayload.status = status; // "rejected" | "active" etc.
+
+    const provider = await Provider.findByIdAndUpdate(
+      providerId,
+      updatePayload,
+      { new: true },
+    );
+
+    if (!provider) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Provider not found" });
+    }
+
+    res.json({
+      success: true,
+      message: verified
+        ? "Provider verified successfully"
+        : status === "rejected"
+          ? "Provider rejected"
+          : "Provider unverified",
+      data: provider,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// GET /admin/disputes
 export const getAllDisputes = async (
   req: express.Request,
   res: express.Response,
@@ -71,10 +77,8 @@ export const resolveDispute = async (
   try {
     const { bookingId } = req.params;
     const { action, adminNote, refundCustomer, suspendProvider } = req.body;
-    // action: "resolve" | "reject" | "escalate"
 
     const disputeStatus = action === "escalate" ? "escalated" : "resolved";
-
     const bookingStatus = action === "escalate" ? "disputed" : "completed";
 
     const booking = await Booking.findByIdAndUpdate(
@@ -96,7 +100,6 @@ export const resolveDispute = async (
         .json({ success: false, error: "Booking not found" });
     }
 
-    // Optionally suspend provider account
     if (suspendProvider) {
       await Provider.findOneAndUpdate(
         { userId: booking.providerId },

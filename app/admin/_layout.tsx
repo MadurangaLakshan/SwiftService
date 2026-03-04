@@ -94,6 +94,8 @@ export default function AdminLayout() {
             ),
           }}
         />
+
+        <Tabs.Screen name="ProviderDetailsScreen" options={{ href: null }} />
       </Tabs>
     </AdminProvider>
   );

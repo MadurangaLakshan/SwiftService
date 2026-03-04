@@ -212,6 +212,15 @@ const ProfileScreen: React.FC = () => {
               {providerData?.name}
             </Text>
 
+            {providerData?.verified && (
+              <View className="flex-row items-center mt-2 bg-blue-500 px-3 py-1 rounded-full">
+                <Ionicons name="checkmark-circle" size={14} color="white" />
+                <Text className="text-white text-xs font-bold ml-1">
+                  Verified
+                </Text>
+              </View>
+            )}
+
             <Text className="text-blue-100 text-base mt-1">
               {providerData?.email}
             </Text>

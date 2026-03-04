@@ -4,35 +4,16 @@ export const adminGetAllProviders = async () => {
   return authenticatedRequest("/admin/providers", { method: "GET" });
 };
 
-export const getPendingProviders = async () => {
-  try {
-    const response = await authenticatedRequest("/admin/providers", {
-      method: "GET",
-    });
-
-    const data = response.success
-      ? response.data
-      : Array.isArray(response)
-        ? response
-        : [];
-
-    return {
-      success: true,
-      data: data.filter((p: any) => !p.verified),
-    };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
+// verified=true → approve, verified=false + status="rejected" → reject
 export const updateProviderStatus = async (
   providerId: string,
   verified: boolean,
+  status?: "rejected",
 ) => {
   try {
     return await authenticatedRequest(`/admin/providers/${providerId}/verify`, {
       method: "PATCH",
-      body: JSON.stringify({ verified }),
+      body: JSON.stringify({ verified, ...(status && { status }) }),
     });
   } catch (error: any) {
     console.error("Error updating provider status:", error);
