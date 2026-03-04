@@ -1,8 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import {
-  getAllProviders,
-  updateProviderStatus,
-} from "../services/providerService";
+import { updateProviderStatus } from "../services/adminService";
+import { getAllProviders } from "../services/providerService";
 
 interface ProviderData {
   _id: string;
@@ -67,7 +65,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({
       const response = await getAllProviders();
 
       // Determine if response is the array itself or contains a .data property
-      const data = Array.isArray(response) ? response : response.data;
+      const data = response?.data?.data || response?.data || [];
 
       if (data && Array.isArray(data)) {
         // Filter for unverified providers

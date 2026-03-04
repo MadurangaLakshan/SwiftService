@@ -44,10 +44,25 @@ export default function AdminLayout() {
             paddingTop: 12,
             height: Platform.OS === "android" ? 64 + insets.bottom : 88,
           },
-          tabBarActiveTintColor: "#10b981", // Admin Green
+          tabBarActiveTintColor: "#10b981",
           tabBarInactiveTintColor: "#9ca3af",
         }}
       >
+        <Tabs.Screen
+          name="DisputesScreen"
+          options={{
+            title: "Disputes",
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="alert-circle-outline" size={26} color={color} />
+            ),
+            tabBarLabel: ({ color }) => (
+              <Text style={{ color, fontSize: 12, marginTop: 4 }}>
+                Disputes
+              </Text>
+            ),
+          }}
+        />
+
         <Tabs.Screen
           name="ApprovalsScreen"
           options={{
@@ -79,24 +94,6 @@ export default function AdminLayout() {
             ),
           }}
         />
-
-        <Tabs.Screen
-          name="SystemSettings"
-          options={{
-            title: "Settings",
-            tabBarIcon: ({ color }) => (
-              <Ionicons name="settings-outline" size={26} color={color} />
-            ),
-            tabBarLabel: ({ color }) => (
-              <Text style={{ color, fontSize: 12, marginTop: 4 }}>
-                Settings
-              </Text>
-            ),
-          }}
-        />
-
-        {/* Hidden detail screens */}
-        <Tabs.Screen name="ProviderReviewDetail" options={{ href: null }} />
       </Tabs>
     </AdminProvider>
   );

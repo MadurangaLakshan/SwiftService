@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { connectDatabase } from "./config/database";
 import { authenticateSocket } from "./middleware/socketAuthMiddleware";
+import adminRoutes from "./routes/adminRoutes";
 import aiChatRoutes from "./routes/aiChatRoutes";
 import bookingRoutes from "./routes/bookingRoutes";
 import customerRoutes from "./routes/customerRoutes";
@@ -50,6 +51,7 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use("/api/admin", adminRoutes);
 app.use("/api/providers", providerRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/users", userRoutes);

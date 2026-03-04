@@ -28,14 +28,6 @@ router.get("/:providerId/reviews", providerController.getProviderReviews);
 //Update provider profile
 router.put("/:userId", authenticateUser, providerController.updateProvider);
 
-// Route for Admin to approve/unapprove via MongoDB _id
-router.patch(
-  "/admin/verify/:providerId",
-  authenticateUser,
-
-  providerController.adminUpdateProviderStatus,
-);
-
 //Delete provider profile
 router.delete("/:userId", authenticateUser, providerController.deleteProvider);
 

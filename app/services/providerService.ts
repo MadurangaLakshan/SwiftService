@@ -97,48 +97,6 @@ export const getAllProviders = async (filters?: {
   });
 };
 
-export const updateProviderStatus = async (
-  providerId: string,
-  verified: boolean,
-) => {
-  try {
-    // We wrap the boolean in an object here for the JSON body
-    return await authenticatedRequest(`/providers/admin/verify/${providerId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ verified }),
-    });
-  } catch (error: any) {
-    console.error("Error updating provider status:", error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Helpful for the Admin Approval Screen
-export const getPendingProviders = async () => {
-  try {
-    const response = await authenticatedRequest("/providers", {
-      method: "GET",
-    });
-
-    // If your backend returns an array directly:
-    if (Array.isArray(response)) {
-      return { success: true, data: response.filter((p: any) => !p.verified) };
-    }
-
-    // If your backend returns { success: true, data: [...] }:
-    if (response.success && Array.isArray(response.data)) {
-      return {
-        success: true,
-        data: response.data.filter((p: any) => !p.verified),
-      };
-    }
-
-    return response;
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
 export const getProviderAvailability = async (userId: string) => {
   return authenticatedRequest(`/providers/${userId}/availability`, {
     method: "GET",
